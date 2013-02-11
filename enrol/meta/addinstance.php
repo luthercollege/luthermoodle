@@ -31,11 +31,11 @@ require_once("$CFG->dirroot/enrol/meta/locallib.php");
 define("MAX_COURSES_PER_PAGE", 1000);
 global $DB, $PAGE, $OUTPUT, $COURSE;
 
-$id             = required_param('id',PARAM_INT); // course id
+$id             = required_param('id', PARAM_INT); // Ccourse id.
 $add            = optional_param('add', 0, PARAM_BOOL);
 $remove         = optional_param('remove', 0, PARAM_BOOL);
 $showall        = optional_param('showall', 0, PARAM_BOOL);
-$searchtext     = optional_param('searchtext', '', PARAM_RAW); // search string
+$searchtext     = optional_param('searchtext', '', PARAM_RAW); // Search string.
 $previoussearch = optional_param('previoussearch', 0, PARAM_BOOL);
 $previoussearch = ($searchtext != '') or ($previoussearch) ? 1:0;
 
@@ -68,12 +68,12 @@ $strnopotentialcourses = 'No courses available';
 $straddcourses = 'Add this course';
 $strremovecourse = 'Remove this course';
 
-/// Print a help notice about the need to use this page
+// Print a help notice about the need to use this page.
 if (!$frm = data_submitted()) {
     $note = 'Use this form to add courses to your meta course (this will import the enrolments)';
     $OUTPUT->box($note);
 
-/// A form was submitted so process the input
+    // A form was submitted so process the input.
 } else {
     if ($add and !empty($frm->addselect) and confirm_sesskey()) {
         $timestart = $timeend = 0;
@@ -94,39 +94,40 @@ if (!$frm = data_submitted()) {
     }
 }
 
-/// Get all existing students and teachers for this course.
-if(! $alreadycourses = $DB->get_records('enrol', array('courseid'=>$course->id, 'enrol'=>'meta'), 'sortorder,courseid','customint1, courseid, enrol, id')) {
+// Get all existing students and teachers for this course.
+if (!$alreadycourses = $DB->get_records('enrol', array('courseid'=>$course->id, 'enrol'=>'meta'),
+    'sortorder,courseid', 'customint1, courseid, enrol, id')) {
     $alreadycourses = array();
 } else {
-    foreach ($alreadycourses as $key=>$acourse) {
+    foreach ($alreadycourses as $key => $acourse) {
         $alreadycourses[$key] = $DB->get_record('course', array('id'=>$key));
     }
 }
 
 $numcourses = 0;
 
-/// Get search results excluding any users already in this course
+// Get search results excluding any users already in this course.
 if (($searchtext != '') and $previoussearch and confirm_sesskey()) {
-    if ($searchcourses = get_courses_search(explode(" ",$searchtext),'fullname ASC',0,99999,$numcourses)) {
+    if ($searchcourses = get_courses_search(explode(" ", $searchtext), 'fullname ASC', 0, 99999, $numcourses)) {
         foreach ($searchcourses as $tmp) {
-            if (array_key_exists($tmp->id,$alreadycourses)) {
+            if (array_key_exists($tmp->id, $alreadycourses)) {
                 unset($searchcourses[$tmp->id]);
             }
             if (!empty($tmp->metacourse)) {
                 unset($searchcourses[$tmp->id]);
             }
         }
-        if (array_key_exists($course->id,$searchcourses)) {
+        if (array_key_exists($course->id, $searchcourses)) {
             unset($searchcourses[$course->id]);
         }
         $numcourses = count($searchcourses);
     }
 }
 
-/// If no search results then get potential students for this course excluding users already in course
+// If no search results then get potential students for this course excluding users already in course.
 if (empty($searchcourses)) {
     $courses = get_courses('all', null, 'c.id, c.fullname, c.visible, c.shortname');
-    foreach ($alreadycourses as $key=>$acourse) {
+    foreach ($alreadycourses as $key => $acourse) {
         unset($courses[$key]);
     }
     foreach ($courses as $c) {
@@ -144,7 +145,7 @@ if (empty($searchcourses)) {
             continue;
         }
     }
-    $numcourses = sizeof($courses);
+    $numcourses = count($courses);
 }
 
 $PAGE->set_heading($course->fullname);
@@ -168,7 +169,7 @@ echo $OUTPUT->header();
                                getElementById('studentform').addselect.selectedIndex=-1;">
               <?php
                 foreach ($alreadycourses as $course) {
-                    echo "<option value=\"$course->id\">".course_format_name($course,60)."</option>\n";
+                    echo "<option value=\"$course->id\">".course_format_name($course, 60)."</option>\n";
                 }
               ?>
               </select></td>
@@ -191,7 +192,7 @@ echo $OUTPUT->header();
                   if (!empty($searchcourses)) {
                       echo "<optgroup label=\"$strsearchresults (" . count($searchcourses) . ")\">\n";
                       foreach ($searchcourses as $course) {
-                          echo "<option value=\"$course->id\">".course_format_name($course,60)."</option>\n";
+                          echo "<option value=\"$course->id\">".course_format_name($course, 60)."</option>\n";
                       }
                       echo "</optgroup>\n";
                   }
@@ -199,10 +200,9 @@ echo $OUTPUT->header();
                       if ($numcourses > MAX_COURSES_PER_PAGE) {
                           echo '<optgroup label="'.get_string('toomanytoshow').'"><option></option></optgroup>'."\n"
                               .'<optgroup label="'.get_string('trysearching').'"><option></option></optgroup>'."\n";
-                      }
-                      else {
+                      } else {
                           foreach ($courses as $course) {
-                          echo "<option value=\"$course->id\">".course_format_name($course,60)."</option>\n";
+                              echo "<option value=\"$course->id\">".course_format_name($course, 60)."</option>\n";
                           }
                       }
                   }
@@ -232,4 +232,3 @@ echo $OUTPUT->header();
     </form>
 <?php
     echo $OUTPUT->footer();
-?>
