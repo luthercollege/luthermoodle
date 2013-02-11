@@ -38,7 +38,6 @@
     }
 */
     $strassigncourses = 'Assign courses';
-    $string['meta:selectaslinked'] = 'Select course as meta linked';
     $strsearch        = get_string("search");
     $strsearchresults  = get_string("searchresults");
     $strcourses   = get_string("courses");
