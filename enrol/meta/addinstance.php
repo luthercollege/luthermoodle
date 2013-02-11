@@ -54,11 +54,7 @@ navigation_node::override_active_url(new moodle_url('/enrol/instances.php', arra
 require_login($course->id);
 require_capability('moodle/course:enrolconfig', $context);
 $enrol = enrol_get_plugin('meta');
-/*
-    if (!$course->metacourse) {
-        redirect("$CFG->wwwroot/course/view.php?id=$course->id");
-    }
-*/
+
 $strassigncourses = 'Assign courses';
 $strsearch        = get_string("search");
 $strsearchresults  = get_string("searchresults");
@@ -72,16 +68,7 @@ $strnopotentialcourses = 'No courses available';
 $straddcourses = 'Add this course';
 $strremovecourse = 'Remove this course';
 
-/*
-    print_header("$course->shortname: $strassigncourses",
-                 $site->fullname,
-                 build_navigation(array(array('name' => $strassigncourses, 'link' => null, 'type' => 'misc'))), "searchtext");
-*/
-
 /// Print a help notice about the need to use this page
-
-//    print_heading(get_string('childcourses'));
-
 if (!$frm = data_submitted()) {
     $note = 'Use this form to add courses to your meta course (this will import the enrolments)';
     $OUTPUT->box($note);
@@ -91,25 +78,11 @@ if (!$frm = data_submitted()) {
     if ($add and !empty($frm->addselect) and confirm_sesskey()) {
         $timestart = $timeend = 0;
         foreach ($frm->addselect as $addcourse) {
-                /*
-            	$addcourse = clean_param($addcourse, PARAM_INT);
-                set_time_limit(180);
-                if (!add_to_metacourse($course->id,$addcourse)) {
-                    error("Could not add the selected course to this meta course!");
-                }
-                */
             $eid = $enrol->add_instance($COURSE, array('customint1'=>$addcourse));
             enrol_meta_sync($COURSE->id);
         }
     } else if ($remove and !empty($frm->removeselect) and confirm_sesskey()) {
         foreach ($frm->removeselect as $removecourse) {
-/*
-        		set_time_limit(180);
-                $removecourse = clean_param($removecourse, PARAM_INT);
-                if (! remove_from_metacourse($course->id,$removecourse)) {
-                    error("Could not remove the selected course from this meta course!");
-                }
-*/
             $select = "courseid = $COURSE->id AND customint1 = $removecourse";
             $enroltodelete = $DB->get_record_select('enrol', $select);
             $eid = $enrol->delete_instance($enroltodelete);
@@ -172,15 +145,6 @@ if (empty($searchcourses)) {
         }
     }
     $numcourses = sizeof($courses);
-/*
-        $numcourses = count_courses_notin_metacourse($course->id);
-
-        if ($numcourses > 0 and $numcourses <= MAX_COURSES_PER_PAGE) {
-            $courses = get_courses_notin_metacourse($course->id);
-        } else {
-            $courses = array();
-        }
-*/
 }
 
 $PAGE->set_heading($course->fullname);
