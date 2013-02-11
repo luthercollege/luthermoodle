@@ -24,53 +24,53 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-	require('../../config.php');
-    require_once("$CFG->dirroot/course/lib.php");
-    require_once("$CFG->dirroot/enrol/meta/locallib.php");
+require('../../config.php');
+require_once("$CFG->dirroot/course/lib.php");
+require_once("$CFG->dirroot/enrol/meta/locallib.php");
 
-    define("MAX_COURSES_PER_PAGE", 1000);
-    global $DB, $PAGE, $OUTPUT, $COURSE;
+define("MAX_COURSES_PER_PAGE", 1000);
+global $DB, $PAGE, $OUTPUT, $COURSE;
 
-    $id             = required_param('id',PARAM_INT); // course id
-    $add            = optional_param('add', 0, PARAM_BOOL);
-    $remove         = optional_param('remove', 0, PARAM_BOOL);
-    $showall        = optional_param('showall', 0, PARAM_BOOL);
-    $searchtext     = optional_param('searchtext', '', PARAM_RAW); // search string
-    $previoussearch = optional_param('previoussearch', 0, PARAM_BOOL);
-    $previoussearch = ($searchtext != '') or ($previoussearch) ? 1:0;
+$id             = required_param('id',PARAM_INT); // course id
+$add            = optional_param('add', 0, PARAM_BOOL);
+$remove         = optional_param('remove', 0, PARAM_BOOL);
+$showall        = optional_param('showall', 0, PARAM_BOOL);
+$searchtext     = optional_param('searchtext', '', PARAM_RAW); // search string
+$previoussearch = optional_param('previoussearch', 0, PARAM_BOOL);
+$previoussearch = ($searchtext != '') or ($previoussearch) ? 1:0;
 
-    if (! $site = get_site()) {
-        redirect("$CFG->wwwroot/$CFG->admin/index.php");
-    }
+if (! $site = get_site()) {
+    redirect("$CFG->wwwroot/$CFG->admin/index.php");
+}
 
-    $course = $DB->get_record('course', array('id'=>$id), '*', MUST_EXIST);
-    $context = get_context_instance(CONTEXT_COURSE, $course->id, MUST_EXIST);
+$course = $DB->get_record('course', array('id'=>$id), '*', MUST_EXIST);
+$context = get_context_instance(CONTEXT_COURSE, $course->id, MUST_EXIST);
 
-    $PAGE->set_url('/enrol/meta/addinstance.php', array('id'=>$course->id));
-    $PAGE->set_pagelayout('admin');
+$PAGE->set_url('/enrol/meta/addinstance.php', array('id'=>$course->id));
+$PAGE->set_pagelayout('admin');
 
-    navigation_node::override_active_url(new moodle_url('/enrol/instances.php', array('id'=>$course->id)));
+navigation_node::override_active_url(new moodle_url('/enrol/instances.php', array('id'=>$course->id)));
 
-    require_login($course->id);
-    require_capability('moodle/course:enrolconfig', $context);
-	$enrol = enrol_get_plugin('meta');
+require_login($course->id);
+require_capability('moodle/course:enrolconfig', $context);
+$enrol = enrol_get_plugin('meta');
 /*
     if (!$course->metacourse) {
         redirect("$CFG->wwwroot/course/view.php?id=$course->id");
     }
 */
-    $strassigncourses = 'Assign courses';
-    $strsearch        = get_string("search");
-    $strsearchresults  = get_string("searchresults");
-    $strcourses   = get_string("courses");
-    $strshowall = get_string("showall");
+$strassigncourses = 'Assign courses';
+$strsearch        = get_string("search");
+$strsearchresults  = get_string("searchresults");
+$strcourses   = get_string("courses");
+$strshowall = get_string("showall");
 
-    $stralreadycourses = 'Courses already assigned';
-    $strnoalreadycourses = 'No courses already assigned';
-    $strpotentialcourses = 'Courses available';
-    $strnopotentialcourses = 'No courses available';
-    $straddcourses = 'Add this course';
-    $strremovecourse = 'Remove this course';
+$stralreadycourses = 'Courses already assigned';
+$strnoalreadycourses = 'No courses already assigned';
+$strpotentialcourses = 'Courses available';
+$strnopotentialcourses = 'No courses available';
+$straddcourses = 'Add this course';
+$strremovecourse = 'Remove this course';
 
 /*
     print_header("$course->shortname: $strassigncourses",
@@ -82,16 +82,15 @@
 
 //    print_heading(get_string('childcourses'));
 
-    if (!$frm = data_submitted()) {
-        $note = 'Use this form to add courses to your meta course (this will import the enrolments)';
-        $OUTPUT->box($note);
+if (!$frm = data_submitted()) {
+    $note = 'Use this form to add courses to your meta course (this will import the enrolments)';
+    $OUTPUT->box($note);
 
 /// A form was submitted so process the input
-
-    } else {
-        if ($add and !empty($frm->addselect) and confirm_sesskey()) {
-            $timestart = $timeend = 0;
-            foreach ($frm->addselect as $addcourse) {
+} else {
+    if ($add and !empty($frm->addselect) and confirm_sesskey()) {
+        $timestart = $timeend = 0;
+        foreach ($frm->addselect as $addcourse) {
                 /*
             	$addcourse = clean_param($addcourse, PARAM_INT);
                 set_time_limit(180);
@@ -99,11 +98,11 @@
                     error("Could not add the selected course to this meta course!");
                 }
                 */
-			    $eid = $enrol->add_instance($COURSE, array('customint1'=>$addcourse));
-			    enrol_meta_sync($COURSE->id);
-            }
-        } else if ($remove and !empty($frm->removeselect) and confirm_sesskey()) {
-        	foreach ($frm->removeselect as $removecourse) {
+            $eid = $enrol->add_instance($COURSE, array('customint1'=>$addcourse));
+            enrol_meta_sync($COURSE->id);
+        }
+    } else if ($remove and !empty($frm->removeselect) and confirm_sesskey()) {
+        foreach ($frm->removeselect as $removecourse) {
 /*
         		set_time_limit(180);
                 $removecourse = clean_param($removecourse, PARAM_INT);
@@ -111,70 +110,68 @@
                     error("Could not remove the selected course from this meta course!");
                 }
 */
-        		$select = "courseid = $COURSE->id AND customint1 = $removecourse";
-				$enroltodelete = $DB->get_record_select('enrol', $select);
-        		$eid = $enrol->delete_instance($enroltodelete);
-            }
-
-        } else if ($showall and confirm_sesskey()) {
-            $searchtext = '';
-            $previoussearch = 0;
+            $select = "courseid = $COURSE->id AND customint1 = $removecourse";
+            $enroltodelete = $DB->get_record_select('enrol', $select);
+            $eid = $enrol->delete_instance($enroltodelete);
         }
-    }
 
+    } else if ($showall and confirm_sesskey()) {
+        $searchtext = '';
+        $previoussearch = 0;
+    }
+}
 
 /// Get all existing students and teachers for this course.
-    if(! $alreadycourses = $DB->get_records('enrol', array('courseid'=>$course->id, 'enrol'=>'meta'), 'sortorder,courseid','customint1, courseid, enrol, id')) {
-        $alreadycourses = array();
-    } else {
-		foreach ($alreadycourses as $key=>$acourse) {
-			$alreadycourses[$key] = $DB->get_record('course', array('id'=>$key));
-		}
+if(! $alreadycourses = $DB->get_records('enrol', array('courseid'=>$course->id, 'enrol'=>'meta'), 'sortorder,courseid','customint1, courseid, enrol, id')) {
+    $alreadycourses = array();
+} else {
+    foreach ($alreadycourses as $key=>$acourse) {
+        $alreadycourses[$key] = $DB->get_record('course', array('id'=>$key));
     }
+}
 
-	$numcourses = 0;
-
+$numcourses = 0;
 
 /// Get search results excluding any users already in this course
-    if (($searchtext != '') and $previoussearch and confirm_sesskey()) {
-        if ($searchcourses = get_courses_search(explode(" ",$searchtext),'fullname ASC',0,99999,$numcourses)) {
-            foreach ($searchcourses as $tmp) {
-                if (array_key_exists($tmp->id,$alreadycourses)) {
-                    unset($searchcourses[$tmp->id]);
-                }
-                if (!empty($tmp->metacourse)) {
-                    unset($searchcourses[$tmp->id]);
-                }
+if (($searchtext != '') and $previoussearch and confirm_sesskey()) {
+    if ($searchcourses = get_courses_search(explode(" ",$searchtext),'fullname ASC',0,99999,$numcourses)) {
+        foreach ($searchcourses as $tmp) {
+            if (array_key_exists($tmp->id,$alreadycourses)) {
+                unset($searchcourses[$tmp->id]);
             }
-            if (array_key_exists($course->id,$searchcourses)) {
-                unset($searchcourses[$course->id]);
+            if (!empty($tmp->metacourse)) {
+                unset($searchcourses[$tmp->id]);
             }
-            $numcourses = count($searchcourses);
         }
+        if (array_key_exists($course->id,$searchcourses)) {
+            unset($searchcourses[$course->id]);
+        }
+        $numcourses = count($searchcourses);
     }
+}
 
 /// If no search results then get potential students for this course excluding users already in course
-    if (empty($searchcourses)) {
-		$courses = get_courses('all', null, 'c.id, c.fullname, c.visible, c.shortname');
-		foreach ($alreadycourses as $key=>$acourse) {
-			unset($courses[$key]);
-		}
-        foreach ($courses as $c) {
-            if ($c->id == SITEID or $c->id == $course->id or isset($existing[$c->id])) {
-                unset($courses[$c->id]);
-                continue;
-            }
-            $coursecontext = get_context_instance(CONTEXT_COURSE, $c->id);
-            if (!$c->visible and !has_capability('moodle/course:viewhiddencourses', $coursecontext)) {
-                unset($courses[$c->id]);
-                continue;
-            }
-            if (!has_capability('enrol/meta:selectaslinked', $coursecontext)) {
-                unset($courses[$c->id]);
-            	continue;
-            }
+if (empty($searchcourses)) {
+    $courses = get_courses('all', null, 'c.id, c.fullname, c.visible, c.shortname');
+    foreach ($alreadycourses as $key=>$acourse) {
+        unset($courses[$key]);
+    }
+    foreach ($courses as $c) {
+        if ($c->id == SITEID or $c->id == $course->id or isset($existing[$c->id])) {
+            unset($courses[$c->id]);
+            continue;
         }
-        $numcourses = sizeof($courses);
+        $coursecontext = get_context_instance(CONTEXT_COURSE, $c->id);
+        if (!$c->visible and !has_capability('moodle/course:viewhiddencourses', $coursecontext)) {
+            unset($courses[$c->id]);
+            continue;
+        }
+        if (!has_capability('enrol/meta:selectaslinked', $coursecontext)) {
+            unset($courses[$c->id]);
+            continue;
+        }
+    }
+    $numcourses = sizeof($courses);
 /*
         $numcourses = count_courses_notin_metacourse($course->id);
 
@@ -184,12 +181,12 @@
             $courses = array();
         }
 */
-    }
+}
 
-    $PAGE->set_heading($course->fullname);
-    $PAGE->set_title(get_string('pluginname', 'enrol_meta'));
+$PAGE->set_heading($course->fullname);
+$PAGE->set_title(get_string('pluginname', 'enrol_meta'));
 
-    echo $OUTPUT->header();
+echo $OUTPUT->header();
 ?>
 
     <form id="studentform" method="post" action="addinstance.php">
