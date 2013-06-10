@@ -57,14 +57,14 @@ require_login($course->id);
 require_capability('moodle/course:enrolconfig', $context);
 $enrol = enrol_get_plugin('meta');
 
-$strassigncourses = 'Assign courses';
-$strsearch        = get_string("search");
-$strsearchresults  = get_string("searchresults");
-$strcourses   = get_string("courses");
-$stralreadycourses = get_string('alreadycourses');
-$strpotentialcourses = get_string('potentialcourses');
-$straddcourses = get_string('addcourses');
-$strremovecourse = get_string('removecourse');
+$strassigncourses = get_string('assigncourses', 'enrol_meta');
+$strsearch        = get_string("search", 'enrol_meta');
+$strsearchresults  = get_string("searchresults", 'enrol_meta');
+$strcourses   = get_string("courses", 'enrol_meta');
+$stralreadycourses = get_string('alreadycourses', 'enrol_meta');
+$strpotentialcourses = get_string('potentialcourses', 'enrol_meta');
+$straddcourses = get_string('addcourses', 'enrol_meta');
+$strremovecourse = get_string('removecourse', 'enrol_meta');
 
 
 if (!$frm = data_submitted()) {
@@ -128,7 +128,6 @@ if (($searchtext != '') and $previoussearch and confirm_sesskey()) {
 
 $PAGE->set_heading($course->fullname);
 $PAGE->set_title(get_string('pluginname', 'enrol_meta'));
-$PAGE->set_state(moodle_page::STATE_IN_BODY);
 
 
 echo $OUTPUT->header();
