@@ -65,6 +65,7 @@ $stralreadycourses = get_string('alreadycourses', 'enrol_meta');
 $strpotentialcourses = get_string('potentialcourses', 'enrol_meta');
 $straddcourses = get_string('addcourses', 'enrol_meta');
 $strremovecourse = get_string('removecourse', 'enrol_meta');
+$strtomanytoshow = get_string('toomanytoshow', 'enrol_meta');
 
 
 if (!$frm = data_submitted()) {
@@ -126,6 +127,32 @@ if (($searchtext != '') and $previoussearch and confirm_sesskey()) {
 	}
 }
 
+// If no search results then get potential students for this course excluding users already in course
+if (empty($searchcourses)) {
+	$courses = get_courses('all', null, 'c.id, c.fullname, c.visible, c.shortname');
+	foreach ($alreadycourses as $key=>$acourse) {
+		unset($courses[$key]);
+	}
+	foreach ($courses as $c) {
+		if ($c->id == SITEID or $c->id == $course->id or isset($existing[$c->id])) {
+			unset($courses[$c->id]);
+			continue;
+		}
+		$coursecontext = get_context_instance(CONTEXT_COURSE, $c->id);
+		if (!$c->visible and !has_capability('moodle/course:viewhiddencourses', $coursecontext)) {
+			unset($courses[$c->id]);
+			continue;
+		}
+		if (!has_capability('enrol/meta:selectaslinked', $coursecontext)) {
+			unset($courses[$c->id]);
+			continue;
+		}
+	}
+	$numcourses = sizeof($courses);
+}
+
+
+
 $PAGE->set_heading($course->fullname);
 $PAGE->set_title(get_string('pluginname', 'enrol_meta'));
 
@@ -137,7 +164,7 @@ echo $OUTPUT->box_start();
 echo html_writer::start_tag('table', array('width' => '80%'));
 echo html_writer::start_tag('tr');
 
-// list of installed child courses
+// list of installed languages
 $url = new moodle_url('/enrol/meta/addinstance.php', array('remove' => 1));
 echo html_writer::start_tag('td', array('valign' => 'top', 'width' => '50%'));
 echo html_writer::start_tag('form', array('id' => 'removestudentform', 'action' => $url->out(), 'method' => 'post'));
@@ -158,9 +185,17 @@ echo html_writer::start_tag('td', array('valign' => 'top', 'width' => '50%'));
 $url = new moodle_url('/enrol/meta/addinstance.php', array('add' => 1));
 echo html_writer::start_tag('form', array('id' => 'addstudentform', 'action' => $url->out(), 'method' => 'post'));
 echo html_writer::start_tag('fieldset');
-echo html_writer::label($strpotentialcourses, 'menucourse');
-echo html_writer::empty_tag('br');
-echo html_writer::select($searchcourses, 'addselect[]', '', false, array('size' => 20, 'multiple' => 'multiple'));
+if ($numcourses > MAX_COURSES_PER_PAGE) {
+	echo html_writer::label($strtomanytoshow, 'menucourse');
+	echo html_writer::empty_tag('br');
+	echo html_writer::select(array(), 'nothing', '', false, array('size' => 20, 'multiple' => 'multiple'));
+} elseif (! empty($searchcourses)) {
+	echo html_writer::label($strpotentialcourses, 'menucourse');
+	echo html_writer::select($searchcourses, 'addselect[]', '', false, array('size' => 20, 'multiple' => 'multiple'));
+} elseif (! empty($courses)) {
+	echo html_writer::label($strpotentialcourses, 'menucourse');
+	echo html_writer::select($courses, 'addselect[]', '', false, array('size' => 20, 'multiple' => 'multiple'));
+}
 echo html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()));
 echo html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'id', 'value' => $id));
 echo html_writer::empty_tag('br');

@@ -41,4 +41,5 @@ $string['removecourse'] = 'Remove selected course link(s)';
 $string['search']        = 'Search courses';
 $string['syncall'] = 'Synchronise all enrolled users';
 $string['syncall_desc'] = 'If enabled all enrolled users are synchronised even if they have no role in parent course, if disabled only users that have at least one synchronised role are enrolled in child course.';
+$string['toomanytoshow'] = 'There are too many courses to show';
 ?>
