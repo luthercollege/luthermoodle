@@ -1,0 +1,116 @@
+#context {
+text-align:right;
+display:inline;
+	}
+
+.ic { 
+display:inline;
+}
+#sections div.sectioncontainer{background-color:#ffc;}
+#sections div.content{width:87%;float:left;position:relative;-webkit-border-radius:0.6em;-webkit-border-radius-bottomleft:0;-webkit-border-radius-topleft:0;border-radius:0.6em;border-radius-bottomleft:0;border-radius-topleft:0;line-height:1.4em;padding:0.5em;}
+#sections div.snum {padding-top:0.2em;}
+#sections div.section {padding-top:0.3em;}
+#sections div.sectioncontentcontainer  div.singlesection img {float:left;padding-top:0.3em;padding-right:0.3em;}
+#sections div.content {background-color:#F9F9F9;}
+#sections div.content .singleectioncategory{margin-top:0.4em;position:relative;display:inline-block;}
+#sections div.content .singlesectioncategory a{display:block;max-width:15em;overflow: hidden;text-overflow:ellipsis;-o-text-overflow:ellipsis;white-space: nowrap;float:left;position:relative;}
+#sections span.sectionname, #sections span.nameheader
+#sections span.sectiontext{display:inline-block;}
+#sections span.nameheader{float:none;margin-left:10em;}
+#sections .section .sectioncontainer div.sectnum {width:3.9em;padding-top:0.5em;}
+/*div.sectnum {display:block;float:left;width:1.4em;padding-right:0.3em;padding-left:0;z-index:99;color:#333;}*/
+#sections .section .sectioncontainer div.sectnum {display:inline-block;float:left;padding-top:.5em;}*/
+#sections .section .sectioncontainer div.sectnum {font-size:.7em;}
+#sections .section .sectioncontainer .sectnum label {font-size:.7em;display:inline-block;padding-right: 0.25em;}
+#sections .reordercontrols {padding-right:1em;margin-top:0.5em;padding-top:0.5em;padding-bottom:0.5em;}
+#sections .reordercontrols .moveselectedonpage {float:right;display:inline-block;padding:0.5em 0;}
+#sections .reordercontrols .sectiondeleteselected {float:left;display:inline-block;margin-right:1em;}
+#sections .reordercontrols .addnewsectionafterselected {float:left;display:inline-block;padding-right:1em;}
+#sections .reordercontrols .returntocourse {float:left;display:inline-block;padding:0.5em 0.3em 0 0;}
+
+form#sections {
+	max-width: 85%;
+	margin: auto;
+}
+
+block_quickset input text {
+	size:"2";
+}
+
+#quickset input button
+span.noaction {display:inline-block;float:right;margin-right:1em;}
+#quickset  input button
+span.updatesettings {display:inline-block;float:left;margin-left:1em;}
+div.sorder {
+	line-height:1em;
+	max-width:30%;
+	position:absolute;
+	right:10px;
+	-webkit-border-radius:0.2em;
+	-webkit-border-radius-bottomleft:0;
+	-webkit-border-radius-topleft:0;
+	border-radius:0.2em;
+	border-radius-bottomleft:0;
+	border-radius-topleft:0;
+	z-index:900;
+	display:inline-block;
+	margin:0;
+	margin-left:5em;
+	background-color:#ddf;
+}
+.ynlabel {
+	text-align:right;
+	font-weight:bold;
+	font-size:9px;
+	padding-right:0px;
+}
+.setleft {
+    text-align:left;
+    border-bottom:1px #eeeeee dotted;
+	margin-bottom:3px;
+	font-size:11px;
+	float:left;
+	width:70%;
+}
+
+.setright {
+	text-align:right;
+	float:right;
+	width:30%;
+}
+
+.toplevel {
+    z-index = 1500;
+}
+.blue {
+color: #0000ff;
+}
+
+.red {
+color: #ff0000;
+
+}
+
+.green {
+color: #00ff00;
+}
+.row {
+
+}
+.course_settings {
+    margin-bottom:5px;
+}
+.small {
+	font-size:9px;
+	color:#333333;
+}
+.button {
+	margin: 0,auto;
+	text-align:center;
+	margin-top:5px;
+	padding:3px;
+	font-size:10px;
+	background:#666;
+	color:#ffffff;
+	border:1px #ffffff solid;
+	}
