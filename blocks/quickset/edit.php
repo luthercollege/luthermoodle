@@ -21,8 +21,8 @@ if (!$course) {
     print_error('invalidcourseid', 'error');
 }
 // Log this visit.
-add_to_log($cm->course, 'section', 'editsections',
-            "view.php?id=$cm->id", "$section->id", $cm->id);
+add_to_log($courseid, 'block_quickset', 'editsections',
+            "edit.php");
 
 // You need mod/section:manage in addition to section capabilities to access this page.
 $context = get_context_instance(CONTEXT_COURSE, $COURSE->id);
@@ -92,7 +92,7 @@ if (optional_param('addnewsectionafterselected', null, PARAM_CLEAN) &&
 	    $DB->execute($sql);
 
 	    // update the course_format_options table
-    	$conditions = array('id' => $courseid, 'name' => 'numsections');
+    	$conditions = array('courseid' => $courseid, 'name' => 'numsections');
     	if (!$courseformat = $DB->get_record('course_format_options', $conditions)) {
     		error('Course format record doesn\'t exist');
     	}
@@ -125,7 +125,7 @@ if (optional_param('sectiondeleteselected', false, PARAM_BOOL) &&
 		$counter++;
 	}
 	// update the course_format_options table
-	$conditions = array('id' => $courseid, 'name' => 'numsections');
+	$conditions = array('courseid' => $courseid, 'name' => 'numsections');
 	if (!$courseformat = $DB->get_record('course_format_options', $conditions)) {
 		error('Course format record doesn\'t exist');
 	}
@@ -221,15 +221,13 @@ function section_print_section_list($sections, $thispageurl, $courseid) {
 
 	$strorder = get_string('order');
 	$strreturn = get_string('returntocourse', 'block_quickset');
-	$strsectionname = get_string('sectionname', 'quiz');
-	$strremove = get_string('remove', 'block_quickset');
+	$strremove = get_string('removeselected', 'block_quickset');
 	$stredit = get_string('edit');
 	$strview = get_string('view');
 	$straction = get_string('action');
 	$strmove = get_string('move');
 	$strmoveup = get_string('moveup');
 	$strmovedown = get_string('movedown');
-	$strsave = get_string('save', 'quiz');
 	$strreordersections = get_string('reordersections', 'block_quickset');
 	$straddnewsectionafterselected = get_string('addnewsectionsafterselected', 'block_quickset');
 	$strareyousureremoveselected = get_string('areyousureremoveselected', 'block_quickset');
@@ -309,13 +307,9 @@ function section_print_section_list($sections, $thispageurl, $courseid) {
 		$reordercheckboxlabelclose = '';
 		if ($sectnum != 0) {
 			$section = $sections[$sectnum];
-			$sectionparams = array(
-					'returnurl' => $returnurl,
-					'cmid' => $quiz->cmid,
-					'id' => $section->id);
+			$sectionparams = array();
 			$sectionurl = new moodle_url('/section/section.php',
 					$sectionparams);
-			$sectioncount++;
 
 				// This is an actual section.
 				?>
@@ -349,14 +343,14 @@ function section_print_section_list($sections, $thispageurl, $courseid) {
                         <?php
                         echo '<input type="text" name="o' . $section->id .
                                 '" size="4" value="' . (10*$count) .
-                                '" tabindex="' . ($lastindex + $qno) . '" />';
+                                '" tabindex="' . ($lastindex + $sno) . '" />';
                         ?>
 			</div>
                         <?php
                 ?>
             <div class="sectioncontentcontainer">
                 <?php
-                    print_section_reordertool($section);
+                    print_section_reordertool($section, $lastindex, $sno);
                 ?>
             </div>
         </div>
@@ -378,14 +372,11 @@ function section_print_section_list($sections, $thispageurl, $courseid) {
      * @param object $sectionurl The url of the section editing page as a moodle_url object
      * @param object $quiz The quiz in the context of which the section is being displayed
      */
-    function print_section_reordertool($section, $returnurl, $quiz) {
+    function print_section_reordertool($section, $lastindex, $sno) {
     	echo '<div class="singlesection ">';
     	echo '<label for="n' . $section->id . '">';
-//    	echo print_section_icon($section);
-    	echo ' ' . section_tostring($section);
+    	echo ' ' . section_tostring($section, $lastindex, $sno);
     	echo '</label>';
-//    	echo '<span class="sectionpreview">' .
-//    			quiz_section_action_icons($quiz, $quiz->cmid, $section, $returnurl) . '</span>';
     	echo "</div>\n";
     }
 
@@ -398,18 +389,18 @@ function section_print_section_list($sections, $thispageurl, $courseid) {
  *       If false, show only section name.
  * @param bool $return If true (default), return the output. If false, print it.
  */
-function section_tostring($section, $showicon = false,
+function section_tostring($section, $lastindex, $sno, $showicon = false,
         $showsectiontext = true, $return = true) {
     global $COURSE;
     $result = '';
     $result .= '<span class="">';
     if ($section->name == '') {
     	$result .= '<input type="text" name="n' . $section->id .
-                                '" size="75" value="Untitled" tabindex="' . ($lastindex + $qno) . '" /></span>';
+                                '" size="75" value="Untitled" tabindex="' . ($lastindex + $sno) . '" /></span>';
     } else {
     	$result .= '<input type="text" name="n' . $section->id .
                                 '" size="75" value="' . $section->name .
-                                '" tabindex="' . ($lastindex + $qno) . '" /></span>';
+                                '" tabindex="' . ($lastindex + $sno) . '" /></span>';
     }
     if ($return) {
         return $result;
@@ -431,7 +422,7 @@ function process_form($courseid, $data) {
 	}
 	$shortname = $COURSE->shortname;
 
-	$conditions = array('id' => $courseid, 'name' => 'numsections');
+	$conditions = array('courseid' => $courseid, 'name' => 'numsections');
 	if (!$courseformat = $DB->get_record('course_format_options', $conditions)) {
 		error('Course format record doesn\'t exist');
 	}
