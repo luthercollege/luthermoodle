@@ -1,17 +1,10 @@
 <?php
 
-  /* This is the global search shortcut block - a single query can be entered, and
-  * the user will be redirected to the query page where they can enter more
-  *  advanced queries, and view the results of their search. When searching from
-  *  this block, the broadest possible selection of documents is searched.
-  *
-  *
-  *  Todo: make strings -> get_string()
-  *
-  * @package search
-  * @subpackage search block
-  * @author: Michael Champanis (mchampan), reengineered by Valery Fremaux
-  * @date: 2006 06 25
+  /* Quickset to set most commonly changed course settings
+  *  as well as rename, rearrange, insert and delete course sections
+  * @package quickset
+  * @author: Bob Puffer Luther College <puffro01@luther.edu>
+  * @date: 2010 ->
   */
 
   class block_quickset extends block_base {
@@ -33,9 +26,9 @@
 
     function get_content() {
 		global $CFG, $COURSE, $USER, $PAGE, $DB;
-		echo '<style>';
-		include_once 'styles.css';
-		echo '</style>';
+//		echo '<style>';
+//		include_once 'styles.css';
+//		echo '</style>';
         $AVAILABLE = 1;
         $UNAVAILABLE = 0;
 	  $this->content = new stdClass;
@@ -72,37 +65,48 @@
 
                 . '<div class="setleft ' . $students . '">Students see course?</div>'
                 . '<div class="setright">'
-                	. '<input type="radio" style="margin-top:4px" name="course" value=' . $AVAILABLE . $studentschecked . ' />'
-                	. '<input type="radio" style="margin-top:4px" name="course" value=' . $UNAVAILABLE . $studentsunchecked . ' />'
+                	. '<span class="leftradio">'
+                	. '<input type="radio" name="course" value=' . $AVAILABLE . $studentschecked . ' />'
+                    . '</span>'
+                	. '<span class="rightradio">'
+                    . '<input type="radio" name="course" value=' . $UNAVAILABLE . $studentsunchecked . ' />'
+                    . '</span>'
                 . '</div>'
 
                 . '<div class="setleft ' . $grades . '">Grades visible?</div>'
                 . '<div>'
-                	. '<input type="radio" style="margin-top:4px" name="grades" value=' . $AVAILABLE . $gradeschecked . ' />'
-                	. '<input type="radio" style="margin-top:4px" name="grades" value=' . $UNAVAILABLE . $gradesunchecked . ' />'
+                	. '<span class="leftradio">'
+                    . '<input type="radio" name="grades" value=' . $AVAILABLE . $gradeschecked . ' />'
+                    . '</span>'
+                	. '<span class="rightradio">'
+                    . '<input type="radio" name="grades" value=' . $UNAVAILABLE . $gradesunchecked . ' />'
+                    . '</span>'
                 . '</div>'
 
-                . '<div class="setleft blue toplevel" style="margin-top:4px" >Visible sections </div>'
-                . '<div class="setright" style="margin-top:4px">'
+                . '<div class="setleft blue toplevel" >Visible sections </div>'
+                . '<div class="setright">'
                 	. '<input type="text" name="number" size="2" value="'.$numsections.'"/>'
                 . '</div>'
 
                 . '<br /><br />'
 
-                . '<div style="min-width:100%">'
+                . '<div>'
+                    . '<span class="nodisplay defaultaction">'
+                        . '<input type="submit" name="updatesettings"  value="Update settings">'
+	                . '</span>'
+                    . '<span class="noaction">'
+	                	. '<input type="submit" name="noaction" value="Edit Sections" >'
+	                . '</span>'
                 	. '<span class="updatesettings">'
-	                	. '<input type="submit" name="updatesettings" style="display:inline-block;font-size:.9em;float:left;margin-right:0px;margin-left:0px;padding-left:0px;background-color: #ff9999" value="Update settings">'
-                	. '</span>'
-	                . '<span class="noaction">'
-	                	. '<input type="submit" name="noaction" value="Edit Sections" style="display:inline-block;float:right;font-size:.9em;margin-right:0px;margin-left:0px;padding-right:0px;background-color: #66ffcc">'
+	                	. '<input type="submit" name="updatesettings"  value="Update settings">'
 	                . '</span>'
 	            . '</div>'
 
 	            . '<br /><br />'
 
-                . '<div style="text-align:center"><a href="' . $CFG->wwwroot . '/course/edit.php?id=' . $COURSE->id . '"> More Settings </a></div>'
+                . '<div class="textcenter"><a href="' . $CFG->wwwroot . '/course/edit.php?id=' . $COURSE->id . '"> More Settings </a></div>'
                 . '</div></form>';
-        $this->content->text .= '<div class="small" style="text-align:center;color:red">Note: This block invisible to students</div>';
+        $this->content->text .= '<div class="smallred">Note: This block invisible to students</div>';
 
     }
 		  //no footer, thanks

@@ -6,42 +6,37 @@ display:inline;
 .ic { 
 display:inline;
 }
-#sections div.sectioncontainer{background-color:#ffc;}
-#sections div.content{width:87%;float:left;position:relative;-webkit-border-radius:0.6em;-webkit-border-radius-bottomleft:0;-webkit-border-radius-topleft:0;border-radius:0.6em;border-radius-bottomleft:0;border-radius-topleft:0;line-height:1.4em;padding:0.5em;}
-#sections div.snum {padding-top:0.2em;}
-#sections div.section {padding-top:0.3em;}
-#sections div.sectioncontentcontainer  div.singlesection img {float:left;padding-top:0.3em;padding-right:0.3em;}
-#sections div.content {background-color:#F9F9F9;}
-#sections div.content .singleectioncategory{margin-top:0.4em;position:relative;display:inline-block;}
-#sections div.content .singlesectioncategory a{display:block;max-width:15em;overflow: hidden;text-overflow:ellipsis;-o-text-overflow:ellipsis;white-space: nowrap;float:left;position:relative;}
-#sections span.sectionname, #sections span.nameheader
-#sections span.sectiontext{display:inline-block;}
-#sections span.nameheader{float:none;margin-left:10em;}
-#sections .section .sectioncontainer div.sectnum {width:3.9em;padding-top:0.5em;}
-/*div.sectnum {display:block;float:left;width:1.4em;padding-right:0.3em;padding-left:0;z-index:99;color:#333;}*/
-#sections .section .sectioncontainer div.sectnum {display:inline-block;float:left;padding-top:.5em;}*/
-#sections .section .sectioncontainer div.sectnum {font-size:.7em;}
-#sections .section .sectioncontainer .sectnum label {font-size:.7em;display:inline-block;padding-right: 0.25em;}
-#sections .reordercontrols {padding-right:1em;margin-top:0.5em;padding-top:0.5em;padding-bottom:0.5em;}
-#sections .reordercontrols .moveselectedonpage {float:right;display:inline-block;padding:0.5em 0;}
-#sections .reordercontrols .sectiondeleteselected {float:left;display:inline-block;margin-right:1em;}
-#sections .reordercontrols .addnewsectionafterselected {float:left;display:inline-block;padding-right:1em;}
-#sections .reordercontrols .returntocourse {float:left;display:inline-block;padding:0.5em 0.3em 0 0;}
 
-form#sections {
+.block_quickset form#sections {
 	max-width: 85%;
 	margin: auto;
 }
 
-block_quickset input text {
-	size:"2";
+.block_quickset span.updatesettings input {
+	cursor: hand; 
+	cursor: pointer; 
+	display:inline-block;
+	font-size:90%;
+	float:left;
+	margin-right:0px;
+	margin-left:0px;
+	padding-left:0px;
+	background-color: #ff9999;
 }
 
-#quickset input button
-span.noaction {display:inline-block;float:right;margin-right:1em;}
-#quickset  input button
-span.updatesettings {display:inline-block;float:left;margin-left:1em;}
-div.sorder {
+.block_quickset span.noaction input {
+	cursor: hand; 
+	cursor: pointer; 
+	display:inline-block;
+	font-size:90%;
+	float:left;
+	margin-right:0px;
+	margin-left:0px;
+	padding-left:0px;
+	background-color: #66ff33;
+	}
+
+.block_quickset div.sorder {
 	line-height:1em;
 	max-width:30%;
 	position:absolute;
@@ -58,59 +53,87 @@ div.sorder {
 	margin-left:5em;
 	background-color:#ddf;
 }
-.ynlabel {
+.block_quickset .ynlabel {
 	text-align:right;
 	font-weight:bold;
-	font-size:9px;
+	font-size:75%;
 	padding-right:0px;
 }
-.setleft {
+.block_quickset .setleft {
     text-align:left;
     border-bottom:1px #eeeeee dotted;
 	margin-bottom:3px;
-	font-size:11px;
+	margin-top:4px;
+	font-size:90%;
 	float:left;
 	width:70%;
 }
+.block_quickset span.leftradio input {
+	margin-top:4px;
+	margin-right:2px;
+}
 
-.setright {
+.block_quickset span.rightradio input{
+	margin-top:4px;
+	margin-left:2px;
+}
+.block_quickset .setright {
 	text-align:right;
 	float:right;
 	width:30%;
+	margin-top:4px;
 }
 
-.toplevel {
+.block_quickset .toplevel {
     z-index = 1500;
 }
-.blue {
+.block_quickset .blue {
 color: #0000ff;
 }
 
-.red {
+.block_quickset .red {
 color: #ff0000;
 
 }
 
-.green {
-color: #00ff00;
+.block_quickset .green {
+color: #009900;
 }
-.row {
-
+.block_quickset .textcenter {
+	text-align: center;
 }
-.course_settings {
+.block_quickset .course_settings {
     margin-bottom:5px;
 }
-.small {
-	font-size:9px;
+
+.block_quickset div.smallred {
+	text-align:center;
+	color:red;
+	font-size: 75%;
+	}
+.block_quickset .small {
+	font-size:75%;
 	color:#333333;
 }
-.button {
-	margin: 0,auto;
-	text-align:center;
-	margin-top:5px;
-	padding:3px;
-	font-size:10px;
-	background:#666;
-	color:#ffffff;
-	border:1px #ffffff solid;
-	}
+
+.block_quickset .nodisplay input {display: none;}
+
+/***** edit sections styles *****/
+#sections {text-align:center;}
+#sections div.content{background-color:#F9F9F9; width:87%;float:none;margin: auto; position:relative;-webkit-border-radius:0.6em;-webkit-border-radius-bottomleft:0;-webkit-border-radius-topleft:0;border-radius:0.6em;border-radius-bottomleft:0;border-radius-topleft:0;line-height:1.4em;padding:0.5em;}
+#sections div.snum {padding-top:0.2em;}
+#sections div.section {padding-top:0.3em;display: inline-block;}
+#sections span.sectionname, #sections span.nameheader
+#sections span.sectiontext{display:inline-block;}
+#sections span.sectioncontainer{display: block;}
+#sections .section .sectioncontainer span.sectnum {width:2.6em;float:left;padding-top:.2em; vertical-align:middle;}
+#sections .section .sectioncontainer span.singlesection {display:inline-block;}
+#sections .section .sectioncontainer span.sectnum label {font-size:80%;display:inline-block;margin-right:.25em;}
+#sections .section span.sorder {display: inline-block;}
+#sections div.reordercontrols {text-align: center;} 
+#sections .reordercontrols .nodisplay {display: none;}
+#sections .reordercontrols .nameheader{float:none;}
+#sections .reordercontrols .moveselectedonpage input{background-color: #66ff33; cursor: hand; cursor: pointer; display:inline-block;}
+#sections .reordercontrols .sectiondeleteselected input{cursor: hand; cursor: pointer;display:inline-block; margin-right:1em;}
+#sections .reordercontrols .addnewsectionafterselected input{background-color: #99ccff; cursor: hand; cursor: pointer; display:inline-block; margin-right:1em;}
+#sections .reordercontrols .returntocourse input{background-color: #cccccc; cursor: hand; cursor: pointer; display:inline-block; margin-right:1em}

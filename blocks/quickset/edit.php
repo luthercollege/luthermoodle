@@ -71,9 +71,6 @@ if (optional_param('addnewsectionafterselected', null, PARAM_CLEAN) &&
             // Make sure two sections don't overwrite each other. If we get a second
             // section with the same position, shift the second one along to the next gap.
             $value = clean_param($value, PARAM_INTEGER);
-//            while (array_key_exists($value, $sections)) {
-//                $value++;
-//            }
             $sections[$value] = $sectionid;
         }
     }
@@ -148,9 +145,6 @@ if (optional_param('savechanges', false, PARAM_BOOL) && confirm_sesskey()) {
             // Make sure two sections don't overwrite each other. If we get a second
             // section with the same position, shift the second one along to the next gap.
             $value = clean_param($value, PARAM_INTEGER);
-//            while (array_key_exists($value, $sections)) {
-//                $value++;
-//            }
             $sections[$value] = $sectionid;
         } elseif (preg_match('!^n(pg)?([0-9]+)$!', $key, $namematches)) {
             // Parse input for ordering info.
@@ -158,9 +152,6 @@ if (optional_param('savechanges', false, PARAM_BOOL) && confirm_sesskey()) {
             // Make sure two sections don't overwrite each other. If we get a second
             // section with the same position, shift the second one along to the next gap.
             $value = clean_param($value, PARAM_TEXT);
-//            while (array_key_exists($value, $sectionnames)) {
-//                $value++;
-//            }
             $sectionnames[$value] = $sectionid;
         }
     }
@@ -180,10 +171,7 @@ if (optional_param('savechanges', false, PARAM_BOOL) && confirm_sesskey()) {
     }
     // If ordering info was given, reorder the sections.
     if ($sectionnames) {
-//    	ksort($sections);
-//    	$counter = 0;
     	foreach ($sectionnames as $sectionname=>$sectionid) {
-//    		$counter++;
 			if ($sectionname !== "Untitled") {
 	    		$DB->set_field('course_sections', 'name', $sectionname, array('course' => $courseid, 'id' => $sectionid));
 			}
@@ -214,9 +202,6 @@ echo $OUTPUT->footer();
  */
 function section_print_section_list($sections, $thispageurl, $courseid) {
 	require_once('../../config.php');
-	echo '<style>';
-	include_once 'styles.css';
-	echo '</style>';
 	global $CFG, $DB, $OUTPUT;
 
 	$strorder = get_string('order');
@@ -232,12 +217,6 @@ function section_print_section_list($sections, $thispageurl, $courseid) {
 	$straddnewsectionafterselected = get_string('addnewsectionsafterselected', 'block_quickset');
 	$strareyousureremoveselected = get_string('areyousureremoveselected', 'block_quickset');
 
-	/*
-	 $strselectall = get_string('selectall', 'quiz');
-	$strselectnone = get_string('selectnone', 'quiz');
-	$strtype = get_string('type', 'quiz');
-	$strpreview = get_string('preview', 'quiz');
-	*/
 	//	$sections = $DB->get_records('course_sections', array('course'=>$courseid));
 	foreach ($sections as $section) {
 		$order[] = $section->section;
@@ -247,26 +226,26 @@ function section_print_section_list($sections, $thispageurl, $courseid) {
 
 	$lastindex = count($order) - 1;
 
-	$reordercontrolssetdefaultsubmit = '<div style="display:none;">' .
+	$reordercontrolssetdefaultsubmit = '<span class="nodisplay">' .
 			'<input type="submit" name="savechanges" value="' .
-			$strreordersections . '" /></div>';
-	$reordercontrols1 = '<div class="sectiondeleteselected">' .
+			$strreordersections . '" /></span>';
+
+	$reordercontrols1 = '<span class="sectiondeleteselected">' .
 			'<input type="submit" name="sectiondeleteselected" ' .
 			'onclick="return confirm(\'' .
 			$strareyousureremoveselected . '\');" style="background-color: #ffb2b2" value="' .
-			get_string('removeselected', 'block_quickset') . '" /></div>';
-	$reordercontrols1 .= '<div class="addnewsectionafterselected">' .
-			'<input type="submit" name="addnewsectionafterselected" style="background-color: #99ccff" value="' .
-			$straddnewsectionafterselected . '" /></div>';
+			get_string('removeselected', 'block_quickset') . '" /></span>';
+	$reordercontrols1 .= '<span class="addnewsectionafterselected">' .
+			'<input type="submit" name="addnewsectionafterselected" value="' .
+			$straddnewsectionafterselected . '" /></span>';
 
-	$reordercontrols2top = '<div class="moveselectedonpage">' .
-			'<input type="submit" name="savechanges" style="background-color: #ccffcc" value="' .
-			$strreordersections . '" /></div>';
+	$reordercontrols2top = '<span class="moveselectedonpage">' .
+			'<input type="submit" name="savechanges" value="' .
+			$strreordersections . '" /></span>';
 	$reordercontrols2bottom = '<span class="moveselectedonpage">' .
-			'<input type="submit" name="savechanges" style="background-color: #ccffcc" value="' .
+			'<input type="submit" name="savechanges" value="' .
 			$strreordersections . '" /></span>';
 
-//	$reordercontrols3 = '<span class="nameheader"> Section name </span>';
 	$reordercontrols3 = '<span class="nameheader"></span>';
 	$reordercontrols4 = '<span class="returntocourse">' .
 			'<input type="submit" name="returntocourse" value="' .
@@ -274,21 +253,14 @@ function section_print_section_list($sections, $thispageurl, $courseid) {
 
     $reordercontrolstop = '<div class="reordercontrols">' .
             $reordercontrolssetdefaultsubmit .
-            $reordercontrols2top . '<br /><br /><br />' . $reordercontrols1 . $reordercontrols3 . "<br /><br /></div>";
-    $reordercontrolsbottom = '<div class="reordercontrols">' .
+            $reordercontrols1 . $reordercontrols3 . $reordercontrols2top . "</div><br />";
+    $reordercontrolsbottom = '<br /><br /><div class="reordercontrols">' .
             $reordercontrolssetdefaultsubmit .
             $reordercontrols4 . $reordercontrols2bottom . "</div>";
-/*
-    $reordercontrolsbottom = '<div class="reordercontrols">' .
-            $reordercontrolssetdefaultsubmit .
-            $reordercontrols2bottom . '<br />' .$reordercontrols1 . "</div>";
-*/
-//	$reordercontrolstop = '<div class="reordercontrols">' . $reordercontrols2top . "</div>";
-//	$reordercontrolsbottom = '<div class="reordercontrols">' . $reordercontrols2bottom . "</div>";
 
-	echo '<form method="post" action="edit.php" id="sections"><div>';
+	echo '<div class="editsectionsform">';
+    echo '<form method="post" action="edit.php" id="sections"><div>';
 
-//	echo html_writer::input_hidden_params($pageurl);
 	echo '<input type="hidden" name="sesskey" value="' . sesskey() . '" />';
 	echo '<input type="hidden" name="courseid" value="' . $courseid . '" />';
 	echo '<input type="hidden" name="pageurl" value="' . $thispageurl . '" />';
@@ -313,72 +285,60 @@ function section_print_section_list($sections, $thispageurl, $courseid) {
 
 				// This is an actual section.
 				?>
-<div class="section">
-    <div class="sectioncontainer">
-        <div class="sectnum">
-                <?php
-                $reordercheckbox = '';
-                $reordercheckboxlabel = '';
-                $reordercheckboxlabelclose = '';
-                $reordercheckbox = '<input type="checkbox" name="s' . $section->id .
-                    '" id="s' . $section->id . '" />';
-                $reordercheckboxlabel = '<label for="s' . $section->id . '">';
-                $reordercheckboxlabelclose = '</label>';
-                echo $reordercheckboxlabel . $sno . $reordercheckboxlabelclose .
-                        $reordercheckbox;
+                <div class="section">
+                    <span class="sectioncontainer">
+                        <span class="sectnum">
+                            <?php
+                            $reordercheckbox = '';
+                            $reordercheckboxlabel = '';
+                            $reordercheckboxlabelclose = '';
+                            $reordercheckbox = '<input type="checkbox" name="s' . $section->id .
+                                '" id="s' . $section->id . '" />';
+                            $reordercheckboxlabel = '<label for="s' . $section->id . '">';
+                            $reordercheckboxlabelclose = '</label>';
+                            echo $reordercheckboxlabel . $sno . $reordercheckboxlabelclose .
+                                    $reordercheckbox;
 
-                ?>
-        </div>
-        <div class="content">
-            <div class="sectioncontrols">
-			</div>
-				<?php
-                ?>
-            <div class="sname">
-                        <?php
-//                        echo $section->section . '  ' . $section->name;
-                        ?>
-			</div>
-			<div class="sorder">
-                        <?php
-                        echo '<input type="text" name="o' . $section->id .
-                                '" size="4" value="' . (10*$count) .
-                                '" tabindex="' . ($lastindex + $sno) . '" />';
-                        ?>
-			</div>
-                        <?php
-                ?>
-            <div class="sectioncontentcontainer">
-                <?php
-                    print_section_reordertool($section, $lastindex, $sno);
-                ?>
+                            ?>
+                        </span>
+                        <span class="content">
+                            <span class="sectioncontentcontainer">
+                                <?php
+                                    print_section_reordertool($section, $lastindex, $sno);
+                                ?>
+                            </span>
+                			<span class="sorder">
+                                <?php
+                                echo '<input type="text" name="o' . $section->id .
+                                        '" size="2" value="' . (10*$count) .
+                                        '" tabindex="' . ($lastindex + $sno) . '" />';
+                                ?>
+                			</span>
+                        </span>
+                </span>
             </div>
-        </div>
-    </div>
-</div>
-
-                <?php
+            <?php
         }
     }
     echo $reordercontrolsbottom;
-    echo '</div></form>';
+    echo '</div></form></div>';
 }
 
-    /**
-     * Print a given single section in quiz for the reordertool tab of edit.php.
-     * Meant to be used from quiz_print_section_list()
-     *
-     * @param object $section A section object from the database sections table
-     * @param object $sectionurl The url of the section editing page as a moodle_url object
-     * @param object $quiz The quiz in the context of which the section is being displayed
-     */
-    function print_section_reordertool($section, $lastindex, $sno) {
-    	echo '<div class="singlesection ">';
-    	echo '<label for="n' . $section->id . '">';
-    	echo ' ' . section_tostring($section, $lastindex, $sno);
-    	echo '</label>';
-    	echo "</div>\n";
-    }
+/**
+ * Print a given single section in quiz for the reordertool tab of edit.php.
+ * Meant to be used from quiz_print_section_list()
+ *
+ * @param object $section A section object from the database sections table
+ * @param object $sectionurl The url of the section editing page as a moodle_url object
+ * @param object $quiz The quiz in the context of which the section is being displayed
+ */
+function print_section_reordertool($section, $lastindex, $sno) {
+	echo '<span class="singlesection ">';
+	echo '<label for="n' . $section->id . '">';
+	echo ' ' . section_tostring($section, $lastindex, $sno);
+	echo '</label>';
+	echo "</span>\n";
+}
 
 /**
  * Creates a textual representation of a section for display.
@@ -428,37 +388,35 @@ function process_form($courseid, $data) {
 	}
 
 	$context = get_context_instance(CONTEXT_COURSE, $courseid);
-//	if ($data = data_submitted() and confirm_sesskey()) {
-		$context = get_context_instance(CONTEXT_COURSE, $courseid);
-		if (has_capability('moodle/course:update', $context)) {
-			//// process making grades available data
-			$course->showgrades = $data['grades'];
-			//// Process course availability
-			$course->visible = $data['course'];
-			//// Process number of sections
-			$course->fullname = addslashes($course->fullname);
-			if (!$DB->update_record('course',$course)) {
-				print_error('coursenotupdated');
-			}
-			$courseformat->value = min($data['number'],52);
-			if (!$DB->update_record('course_format_options',$courseformat)) {
-				print_error('coursenotupdated');
-			}
-			// check to see if new sections need to be added onto the end
-			$sql = " SELECT MAX(section) from " . $CFG->prefix . "course_sections
-			            WHERE course = '$courseid'";
-			$maxsection = $DB->get_field_sql($sql);
-			for ($i = $data['number'] - $maxsection; $i > 0; $i--) {
-			    // clone the previous sectionid
-			    $newsection = $DB->get_record('course_sections', array('course' => $courseid, 'section' => $maxsection));
-			    $newsection->name = null;
-			    $newsection->summary = '';
-			    $newsection->sequence = '';
-			    $newsection->section = $maxsection + $i;
-			    unset($newsection->id);
-			    $newsection->id = $DB->insert_record('course_sections', $newsection, true);
-			}
+	$context = get_context_instance(CONTEXT_COURSE, $courseid);
+	if (has_capability('moodle/course:update', $context)) {
+		//// process making grades available data
+		$course->showgrades = $data['grades'];
+		//// Process course availability
+		$course->visible = $data['course'];
+		//// Process number of sections
+		$course->fullname = addslashes($course->fullname);
+		if (!$DB->update_record('course',$course)) {
+			print_error('coursenotupdated');
 		}
-//	}
+		$courseformat->value = min($data['number'],52);
+		if (!$DB->update_record('course_format_options',$courseformat)) {
+			print_error('coursenotupdated');
+		}
+		// check to see if new sections need to be added onto the end
+		$sql = " SELECT MAX(section) from " . $CFG->prefix . "course_sections
+		            WHERE course = '$courseid'";
+		$maxsection = $DB->get_field_sql($sql);
+		for ($i = $data['number'] - $maxsection; $i > 0; $i--) {
+		    // clone the previous sectionid
+		    $newsection = $DB->get_record('course_sections', array('course' => $courseid, 'section' => $maxsection));
+		    $newsection->name = null;
+		    $newsection->summary = '';
+		    $newsection->sequence = '';
+		    $newsection->section = $maxsection + $i;
+		    unset($newsection->id);
+		    $newsection->id = $DB->insert_record('course_sections', $newsection, true);
+		}
+	}
 }
 ?>
