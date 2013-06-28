@@ -5,7 +5,7 @@ M.mod_assign.init_tree = function(Y, expand_all, htmlid) {
         var tree = new Y.YUI2.widget.TreeView(htmlid);
 
         tree.subscribe("clickEvent", function(node, event) {
-            // we want normal clicking which redirects to url
+            // We want normal clicking which redirects to url.
             return false;
         });
 
@@ -23,17 +23,21 @@ M.mod_assign.init_grading_table = function(Y) {
             node.on('change', function(e) {
                 rowelement = e.currentTarget.get('parentNode').get('parentNode');
                 if (e.currentTarget.get('checked')) {
-                    rowelement.setAttribute('class', 'selectedrow');
+                    rowelement.removeClass('unselectedrow');
+                    rowelement.addClass('selectedrow');
                 } else {
-                    rowelement.setAttribute('class', 'unselectedrow');
+                    rowelement.removeClass('selectedrow');
+                    rowelement.addClass('unselectedrow');
                 }
             });
 
             rowelement = node.get('parentNode').get('parentNode');
             if (node.get('checked')) {
-                rowelement.setAttribute('class', 'selectedrow');
+                rowelement.removeClass('unselectedrow');
+                rowelement.addClass('selectedrow');
             } else {
-                rowelement.setAttribute('class', 'unselectedrow');
+                rowelement.removeClass('selectedrow');
+                rowelement.addClass('unselectedrow');
             }
         });
 
@@ -45,14 +49,16 @@ M.mod_assign.init_grading_table = function(Y) {
                     checkboxes.each(function(node) {
                         rowelement = node.get('parentNode').get('parentNode');
                         node.set('checked', true);
-                        rowelement.setAttribute('class', 'selectedrow');
+                        rowelement.removeClass('unselectedrow');
+                        rowelement.addClass('selectedrow');
                     });
                 } else {
                     checkboxes = Y.all('td.c0 input');
                     checkboxes.each(function(node) {
                         rowelement = node.get('parentNode').get('parentNode');
                         node.set('checked', false);
-                        rowelement.setAttribute('class', 'unselectedrow');
+                        rowelement.removeClass('selectedrow');
+                        rowelement.addClass('unselectedrow');
                     });
                 }
             });
@@ -163,12 +169,12 @@ M.mod_assign.init_plugin_summary = function(Y, subtype, type, submissionid) {
             fullclassname = 'full_' + thissuffix;
             full = Y.one('.' + fullclassname);
             if (full) {
-                full.hide(true);
+                full.hide(false);
             }
             summaryclassname = 'summary_' + thissuffix;
             summary = Y.one('.' + summaryclassname);
             if (summary) {
-                summary.show(true);
+                summary.show(false);
             }
         });
     }
@@ -177,7 +183,7 @@ M.mod_assign.init_plugin_summary = function(Y, subtype, type, submissionid) {
 
     full = Y.one('.full_' + suffix);
     if (full) {
-        full.hide();
+        full.hide(false);
         full.toggleClass('hidefull');
     }
     if (expand) {
@@ -193,12 +199,12 @@ M.mod_assign.init_plugin_summary = function(Y, subtype, type, submissionid) {
             summaryclassname = 'summary_' + thissuffix;
             summary = Y.one('.' + summaryclassname);
             if (summary) {
-                summary.hide(true);
+                summary.hide(false);
             }
             fullclassname = 'full_' + thissuffix;
             full = Y.one('.' + fullclassname);
             if (full) {
-                full.show(true);
+                full.show(false);
             }
         });
     }

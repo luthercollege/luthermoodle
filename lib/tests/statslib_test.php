@@ -28,6 +28,7 @@ defined('MOODLE_INTERNAL') || die();
 global $CFG;
 require_once($CFG->libdir . '/adminlib.php');
 require_once($CFG->libdir . '/statslib.php');
+require_once($CFG->libdir . '/cronlib.php');
 
 /**
  * Test functions that affect daily stats
@@ -108,6 +109,11 @@ class statslib_daily_testcase extends advanced_testcase {
         $this->setUpDB();
 
         $this->resetAfterTest(true);
+    }
+
+    protected function tearDown() {
+        // Reset the timeouts.
+        set_time_limit(0);
     }
 
     /**
@@ -327,7 +333,8 @@ class statslib_daily_testcase extends advanced_testcase {
 
         $CFG->statsfirstrun = 'all';
         // Allow 1 second difference in case we cross a second boundary.
-        $this->assertLessThanOrEqual(1, stats_get_start_from('daily') - ($time - (3 * 24 * 3600)), 'All start time');
+        // Note: within 3 days of a DST change - -3 days != 3 * 24 hours (it may be more or less).
+        $this->assertLessThanOrEqual(1, stats_get_start_from('daily') - strtotime('-3 days', $time), 'All start time');
 
         $this->prepare_db($dataset[0], array('log'));
         $records = $DB->get_records('log');
@@ -335,7 +342,7 @@ class statslib_daily_testcase extends advanced_testcase {
         $this->assertEquals($day + 14410, stats_get_start_from('daily'), 'Log entry start');
 
         $CFG->statsfirstrun = 'none';
-        $this->assertLessThanOrEqual(1, stats_get_start_from('daily') - ($time - (3 * 24 * 3600)), 'None start time');
+        $this->assertLessThanOrEqual(1, stats_get_start_from('daily') - strtotime('-3 days', $time), 'None start time');
 
         $CFG->statsfirstrun = 14515200;
         $this->assertLessThanOrEqual(1, stats_get_start_from('daily') - ($time - (14515200)), 'Specified start time');

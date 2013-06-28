@@ -393,6 +393,7 @@ function has_capability($capability, context $context, $user = null, $doanything
     if (!isset($USER->id)) {
         // should never happen
         $USER->id = 0;
+        debugging('Capability check being performed on a user with no ID.', DEBUG_DEVELOPER);
     }
 
     // make sure there is a real user specified
@@ -571,8 +572,21 @@ function is_siteadmin($user_or_id = null) {
         $userid = $user_or_id;
     }
 
+    // Because this script is called many times (150+ for course page) with
+    // the same parameters, it is worth doing minor optimisations. This static
+    // cache stores the value for a single userid, saving about 2ms from course
+    // page load time without using significant memory. As the static cache
+    // also includes the value it depends on, this cannot break unit tests.
+    static $knownid, $knownresult, $knownsiteadmins;
+    if ($knownid === $userid && $knownsiteadmins === $CFG->siteadmins) {
+        return $knownresult;
+    }
+    $knownid = $userid;
+    $knownsiteadmins = $CFG->siteadmins;
+
     $siteadmins = explode(',', $CFG->siteadmins);
-    return in_array($userid, $siteadmins);
+    $knownresult = in_array($userid, $siteadmins);
+    return $knownresult;
 }
 
 /**
@@ -1633,8 +1647,6 @@ function role_assign($roleid, $userid, $contextid, $component = '', $itemid = 0,
     }
 
     // Check for existing entry
-    // TODO: Revisit this sql_empty() use once Oracle bindings are improved. MDL-29765
-    $component = ($component === '') ? $DB->sql_empty() : $component;
     $ras = $DB->get_records('role_assignments', array('roleid'=>$roleid, 'contextid'=>$context->id, 'userid'=>$userid, 'component'=>$component, 'itemid'=>$itemid), 'id');
 
     if ($ras) {
@@ -1747,10 +1759,6 @@ function role_unassign_all(array $params, $subcontexts = false, $includemanual =
         }
     }
 
-    // TODO: Revisit this sql_empty() use once Oracle bindings are improved. MDL-29765
-    if (isset($params['component'])) {
-        $params['component'] = ($params['component'] === '') ? $DB->sql_empty() : $params['component'];
-    }
     $ras = $DB->get_records('role_assignments', $params);
     foreach($ras as $ra) {
         $DB->delete_records('role_assignments', array('id'=>$ra->id));
@@ -2062,6 +2070,7 @@ function can_access_course(stdClass $course, $user = null, $withcapability = '',
     if (!isset($USER->id)) {
         // should never happen
         $USER->id = 0;
+        debugging('Course access check being performed on a user with no ID.', DEBUG_DEVELOPER);
     }
 
     // make sure there is a user specified
@@ -2319,12 +2328,14 @@ function get_enrolled_sql(context $context, $withcapability = '', $groupid = 0, 
  * @param string $orderby
  * @param int $limitfrom return a subset of records, starting at this point (optional, required if $limitnum is set).
  * @param int $limitnum return a subset comprising this many records (optional, required if $limitfrom is set).
+ * @param bool $onlyactive consider only active enrolments in enabled plugins and time restrictions
  * @return array of user records
  */
-function get_enrolled_users(context $context, $withcapability = '', $groupid = 0, $userfields = 'u.*', $orderby = null, $limitfrom = 0, $limitnum = 0) {
+function get_enrolled_users(context $context, $withcapability = '', $groupid = 0, $userfields = 'u.*', $orderby = null,
+        $limitfrom = 0, $limitnum = 0, $onlyactive = false) {
     global $DB;
 
-    list($esql, $params) = get_enrolled_sql($context, $withcapability, $groupid);
+    list($esql, $params) = get_enrolled_sql($context, $withcapability, $groupid, $onlyactive);
     $sql = "SELECT $userfields
               FROM {user} u
               JOIN ($esql) je ON je.id = u.id
@@ -2350,12 +2361,13 @@ function get_enrolled_users(context $context, $withcapability = '', $groupid = 0
  * @param context $context
  * @param string $withcapability
  * @param int $groupid 0 means ignore groups, any other value limits the result by group id
+ * @param bool $onlyactive consider only active enrolments in enabled plugins and time restrictions
  * @return array of user records
  */
-function count_enrolled_users(context $context, $withcapability = '', $groupid = 0) {
+function count_enrolled_users(context $context, $withcapability = '', $groupid = 0, $onlyactive = false) {
     global $DB;
 
-    list($esql, $params) = get_enrolled_sql($context, $withcapability, $groupid);
+    list($esql, $params) = get_enrolled_sql($context, $withcapability, $groupid, $onlyactive);
     $sql = "SELECT count(u.id)
               FROM {user} u
               JOIN ($esql) je ON je.id = u.id
@@ -2993,6 +3005,9 @@ function user_can_assign(context $context, $targetroleid) {
 
 /**
  * Returns all site roles in correct sort order.
+ *
+ * Note: this method does not localise role names or descriptions,
+ *       use role_get_names() if you need role names.
  *
  * @param context $context optional context for course role name aliases
  * @return array of role records with optional coursealias property
@@ -4253,7 +4268,7 @@ function user_has_role_assignment($userid, $roleid, $contextid = 0) {
 }
 
 /**
- * Get role name or alias if exists and format the text.
+ * Get localised role name or alias if exists and format the text.
  *
  * @param stdClass $role role object
  *      - optional 'coursealias' property should be included for performance reasons if course context used
@@ -4366,23 +4381,30 @@ function role_get_description(stdClass $role) {
 
 /**
  * Get all the localised role names for a context.
- * @param context $context the context
+ *
+ * In new installs default roles have empty names, this function
+ * add localised role names using current language pack.
+ *
+ * @param context $context the context, null means system context
  * @param array of role objects with a ->localname field containing the context-specific role name.
+ * @param int $rolenamedisplay
+ * @param bool $returnmenu true means id=>localname, false means id=>rolerecord
+ * @return array Array of context-specific role names, or role objects with a ->localname field added.
  */
-function role_get_names(context $context) {
-    return role_fix_names(get_all_roles(), $context);
+function role_get_names(context $context = null, $rolenamedisplay = ROLENAME_ALIAS, $returnmenu = null) {
+    return role_fix_names(get_all_roles($context), $context, $rolenamedisplay, $returnmenu);
 }
 
 /**
- * Prepare list of roles for display, apply aliases and format text
+ * Prepare list of roles for display, apply aliases and localise default role names.
  *
  * @param array $roleoptions array roleid => roleobject (with optional coursealias), strings are accepted for backwards compatibility only
- * @param context|bool $context a context
+ * @param context $context the context, null means system context
  * @param int $rolenamedisplay
  * @param bool $returnmenu null means keep the same format as $roleoptions, true means id=>localname, false means id=>rolerecord
  * @return array Array of context-specific role names, or role objects with a ->localname field added.
  */
-function role_fix_names($roleoptions, $context = null, $rolenamedisplay = ROLENAME_ALIAS, $returnmenu = null) {
+function role_fix_names($roleoptions, context $context = null, $rolenamedisplay = ROLENAME_ALIAS, $returnmenu = null) {
     global $DB;
 
     if (empty($roleoptions)) {
@@ -6281,7 +6303,7 @@ class context_coursecat extends context {
      * @return moodle_url
      */
     public function get_url() {
-        return new moodle_url('/course/category.php', array('id'=>$this->_instanceid));
+        return new moodle_url('/course/index.php', array('categoryid' => $this->_instanceid));
     }
 
     /**
@@ -7635,4 +7657,62 @@ function get_related_contexts_string(context $context) {
     } else {
         return (' ='.$context->id);
     }
+}
+
+/**
+ * Given context and array of users, returns array of users whose enrolment status is suspended,
+ * or enrolment has expired or has not started. Also removes those users from the given array
+ *
+ * @param context $context context in which suspended users should be extracted.
+ * @param array $users list of users.
+ * @param array $ignoreusers array of user ids to ignore, e.g. guest
+ * @return array list of suspended users.
+ */
+function extract_suspended_users($context, &$users, $ignoreusers=array()) {
+    global $DB;
+
+    // Get active enrolled users.
+    list($sql, $params) = get_enrolled_sql($context, null, null, true);
+    $activeusers = $DB->get_records_sql($sql, $params);
+
+    // Move suspended users to a separate array & remove from the initial one.
+    $susers = array();
+    if (sizeof($activeusers)) {
+        foreach ($users as $userid => $user) {
+            if (!array_key_exists($userid, $activeusers) && !in_array($userid, $ignoreusers)) {
+                $susers[$userid] = $user;
+                unset($users[$userid]);
+            }
+        }
+    }
+    return $susers;
+}
+
+/**
+ * Given context and array of users, returns array of user ids whose enrolment status is suspended,
+ * or enrolment has expired or not started.
+ *
+ * @param context $context context in which user enrolment is checked.
+ * @return array list of suspended user id's.
+ */
+function get_suspended_userids($context){
+    global $DB;
+
+    // Get all enrolled users.
+    list($sql, $params) = get_enrolled_sql($context);
+    $users = $DB->get_records_sql($sql, $params);
+
+    // Get active enrolled users.
+    list($sql, $params) = get_enrolled_sql($context, null, null, true);
+    $activeusers = $DB->get_records_sql($sql, $params);
+
+    $susers = array();
+    if (sizeof($activeusers) != sizeof($users)) {
+        foreach ($users as $userid => $user) {
+            if (!array_key_exists($userid, $activeusers)) {
+                $susers[$userid] = $userid;
+            }
+        }
+    }
+    return $susers;
 }

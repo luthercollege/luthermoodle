@@ -1111,7 +1111,7 @@ class page_wiki_diff extends page_wiki {
         global $PAGE, $CFG;
 
         parent::create_navbar();
-        $PAGE->navbar->add(get_string('history', 'wiki'), $CFG->wwwroot . '/mod/wiki/history.php?pageid' . $this->page->id);
+        $PAGE->navbar->add(get_string('history', 'wiki'), $CFG->wwwroot . '/mod/wiki/history.php?pageid=' . $this->page->id);
         $PAGE->navbar->add(get_string('diff', 'wiki'));
     }
 
@@ -1310,17 +1310,7 @@ class page_wiki_history extends page_wiki {
                 $table->attributes['class'] = 'generaltable mdl-align';
                 $table->rowclasses = $rowclass;
 
-                /*$table = new StdClass();
-                 $table->head = array(helpbutton('diff', 'diff', 'wiki', true, false, '', true, ''),
-                 get_string('version'),
-                 get_string('user'),
-                 get_string('modified'),
-                 '');
-                 $table->data = $contents;
-                 $table->class = 'mdl-align';
-                 $table->rowclass = $rowclass;*/
-
-                ///Print the form
+                // Print the form.
                 echo html_writer::start_tag('form', array('action'=>new moodle_url('/mod/wiki/diff.php'), 'method'=>'get', 'id'=>'diff'));
                 echo html_writer::tag('div', html_writer::empty_tag('input', array('type'=>'hidden', 'name'=>'pageid', 'value'=>$pageid)));
                 echo html_writer::table($table);
@@ -2066,7 +2056,7 @@ class page_wiki_save extends page_wiki_edit {
 
             //deleting old locks
             wiki_delete_locks($this->page->id, $USER->id, $this->section);
-            $url = new moodle_url('view.php', array('pageid' => $this->page->id, 'group' => $this->subwiki->groupid));
+            $url = new moodle_url('/mod/wiki/view.php', array('pageid' => $this->page->id, 'group' => $this->subwiki->groupid));
             redirect($url);
         } else {
             print_error('savingerror', 'wiki');
@@ -2108,7 +2098,7 @@ class page_wiki_viewversion extends page_wiki {
         global $PAGE, $CFG;
 
         parent::create_navbar();
-        $PAGE->navbar->add(get_string('history', 'wiki'), $CFG->wwwroot . '/mod/wiki/history.php?pageid' . $this->page->id);
+        $PAGE->navbar->add(get_string('history', 'wiki'), $CFG->wwwroot . '/mod/wiki/history.php?pageid=' . $this->page->id);
         $PAGE->navbar->add(get_string('versionnum', 'wiki', $this->version->version));
     }
 

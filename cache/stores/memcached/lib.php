@@ -140,8 +140,8 @@ class cachestore_memcached extends cache_store implements cache_is_configurable 
                 $this->connection->setOption($key, $value);
             }
             $this->connection->addServers($this->servers);
-            $this->isready = @$this->connection->set("ping", 'ping', 1);
         }
+        $this->isready = @$this->connection->set("ping", 'ping', 1);
     }
 
     /**
@@ -203,6 +203,17 @@ class cachestore_memcached extends cache_store implements cache_is_configurable 
      */
     public static function get_supported_features(array $configuration = array()) {
         return self::SUPPORTS_NATIVE_TTL;
+    }
+
+    /**
+     * Returns false as this store does not support multiple identifiers.
+     * (This optional function is a performance optimisation; it must be
+     * consistent with the value from get_supported_features.)
+     *
+     * @return bool False
+     */
+    public function supports_multiple_identifiers() {
+        return false;
     }
 
     /**

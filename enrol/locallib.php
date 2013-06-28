@@ -1,5 +1,4 @@
 <?php
-
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -19,8 +18,7 @@
  * This file contains the course_enrolment_manager class which is used to interface
  * with the functions that exist in enrollib.php in relation to a single course.
  *
- * @package    core
- * @subpackage enrol
+ * @package    core_enrol
  * @copyright  2010 Sam Hemelryk
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -53,6 +51,16 @@ class course_enrolment_manager {
      * @var string
      */
     protected $instancefilter = null;
+    /**
+     * Limits the focus of the manager to users with specified role
+     * @var int
+     */
+    protected $rolefilter = 0;
+    /**
+     * Limits the focus of the manager to users who match search string
+     * @var string
+     */
+    protected $searchfilter = '';
 
     /**
      * The total number of users enrolled in the course
@@ -110,12 +118,17 @@ class course_enrolment_manager {
      * @param moodle_page $moodlepage
      * @param stdClass $course
      * @param string $instancefilter
+     * @param int $rolefilter If non-zero, filters to users with specified role
+     * @param string $searchfilter If non-blank, filters to users with search text
      */
-    public function __construct(moodle_page $moodlepage, $course, $instancefilter = null) {
+    public function __construct(moodle_page $moodlepage, $course, $instancefilter = null,
+            $rolefilter = 0, $searchfilter = '') {
         $this->moodlepage = $moodlepage;
         $this->context = context_course::instance($course->id);
         $this->course = $course;
         $this->instancefilter = $instancefilter;
+        $this->rolefilter = $rolefilter;
+        $this->searchfilter = $searchfilter;
     }
 
     /**
@@ -139,10 +152,13 @@ class course_enrolment_manager {
         global $DB;
         if ($this->totalusers === null) {
             list($instancessql, $params, $filter) = $this->get_instance_sql();
+            list($filtersql, $moreparams) = $this->get_filter_sql();
+            $params += $moreparams;
             $sqltotal = "SELECT COUNT(DISTINCT u.id)
                            FROM {user} u
                            JOIN {user_enrolments} ue ON (ue.userid = u.id  AND ue.enrolid $instancessql)
-                           JOIN {enrol} e ON (e.id = ue.enrolid)";
+                           JOIN {enrol} e ON (e.id = ue.enrolid)
+                          WHERE $filtersql";
             $this->totalusers = (int)$DB->count_records_sql($sqltotal, $params);
         }
         return $this->totalusers;
@@ -183,7 +199,8 @@ class course_enrolment_manager {
      * Gets all of the users enrolled in this course.
      *
      * If a filter was specified this will be the users who were enrolled
-     * in this course by means of that instance.
+     * in this course by means of that instance. If role or search filters were
+     * specified then these will also be applied.
      *
      * @global moodle_database $DB
      * @param string $sort
@@ -200,6 +217,8 @@ class course_enrolment_manager {
         $key = md5("$sort-$direction-$page-$perpage");
         if (!array_key_exists($key, $this->users)) {
             list($instancessql, $params, $filter) = $this->get_instance_sql();
+            list($filtersql, $moreparams) = $this->get_filter_sql();
+            $params += $moreparams;
             $extrafields = get_extra_user_fields($this->get_context());
             $extrafields[] = 'lastaccess';
             $ufields = user_picture::fields('u', $extrafields);
@@ -207,7 +226,8 @@ class course_enrolment_manager {
                       FROM {user} u
                       JOIN {user_enrolments} ue ON (ue.userid = u.id  AND ue.enrolid $instancessql)
                       JOIN {enrol} e ON (e.id = ue.enrolid)
-                 LEFT JOIN {user_lastaccess} ul ON (ul.courseid = e.courseid AND ul.userid = u.id)";
+                 LEFT JOIN {user_lastaccess} ul ON (ul.courseid = e.courseid AND ul.userid = u.id)
+                     WHERE $filtersql";
             if ($sort === 'firstname') {
                 $sql .= " ORDER BY u.firstname $direction, u.lastname $direction";
             } else if ($sort === 'lastname') {
@@ -220,6 +240,37 @@ class course_enrolment_manager {
             $this->users[$key] = $DB->get_records_sql($sql, $params, $page*$perpage, $perpage);
         }
         return $this->users[$key];
+    }
+
+    /**
+     * Obtains WHERE clause to filter results by defined search and role filter
+     * (instance filter is handled separately in JOIN clause, see
+     * get_instance_sql).
+     *
+     * @return array Two-element array with SQL and params for WHERE clause
+     */
+    protected function get_filter_sql() {
+        global $DB;
+
+        // Search condition.
+        $extrafields = get_extra_user_fields($this->get_context());
+        list($sql, $params) = users_search_sql($this->searchfilter, 'u', true, $extrafields);
+
+        // Role condition.
+        if ($this->rolefilter) {
+            // Get context SQL.
+            $contextids = $this->context->get_parent_context_ids();
+            $contextids[] = $this->context->id;
+            list($contextsql, $contextparams) = $DB->get_in_or_equal($contextids, SQL_PARAMS_NAMED);
+            $params += $contextparams;
+
+            // Role check condition.
+            $sql .= " AND (SELECT COUNT(1) FROM {role_assignments} ra WHERE ra.userid = u.id " .
+                    "AND ra.roleid = :roleid AND ra.contextid $contextsql) > 0";
+            $params['roleid'] = $this->rolefilter;
+        }
+
+        return array($sql, $params);
     }
 
     /**
@@ -318,11 +369,12 @@ class course_enrolment_manager {
      * @param array $params query parameters.
      * @param int $page which page number of the results to show.
      * @param int $perpage number of users per page.
+     * @param int $addedenrollment number of users added to enrollment.
      * @return array with two elememts:
      *      int total number of users matching the search.
      *      array of user objects returned by the query.
      */
-    protected function execute_search_queries($search, $fields, $countfields, $sql, array $params, $page, $perpage) {
+    protected function execute_search_queries($search, $fields, $countfields, $sql, array $params, $page, $perpage, $addedenrollment=0) {
         global $DB, $CFG;
 
         list($sort, $sortparams) = users_order_by_sql('u', $search, $this->get_context());
@@ -330,7 +382,7 @@ class course_enrolment_manager {
 
         $totalusers = $DB->count_records_sql($countfields . $sql, $params);
         $availableusers = $DB->get_records_sql($fields . $sql . $order,
-                array_merge($params, $sortparams), $page*$perpage, $perpage);
+                array_merge($params, $sortparams), ($page*$perpage) - $addedenrollment, $perpage);
 
         return array('totalusers' => $totalusers, 'users' => $availableusers);
     }
@@ -344,9 +396,10 @@ class course_enrolment_manager {
      * @param bool $searchanywhere
      * @param int $page Defaults to 0
      * @param int $perpage Defaults to 25
+     * @param int $addedenrollment Defaults to 0
      * @return array Array(totalusers => int, users => array)
      */
-    public function get_potential_users($enrolid, $search='', $searchanywhere=false, $page=0, $perpage=25) {
+    public function get_potential_users($enrolid, $search='', $searchanywhere=false, $page=0, $perpage=25, $addedenrollment=0) {
         global $DB;
 
         list($ufields, $params, $wherecondition) = $this->get_basic_search_conditions($search, $searchanywhere);
@@ -359,7 +412,7 @@ class course_enrolment_manager {
                       AND ue.id IS NULL";
         $params['enrolid'] = $enrolid;
 
-        return $this->execute_search_queries($search, $fields, $countfields, $sql, $params, $page, $perpage);
+        return $this->execute_search_queries($search, $fields, $countfields, $sql, $params, $page, $perpage, $addedenrollment);
     }
 
     /**
@@ -792,6 +845,12 @@ class course_enrolment_manager {
         );
         if (!empty($this->instancefilter)) {
             $args['ifilter'] = $this->instancefilter;
+        }
+        if (!empty($this->rolefilter)) {
+            $args['role'] = $this->rolefilter;
+        }
+        if ($this->searchfilter !== '') {
+            $args['search'] = $this->searchfilter;
         }
         return $args;
     }

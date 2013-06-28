@@ -785,11 +785,6 @@ class cm_info extends stdClass {
         if (empty($this->content)) {
             return '';
         }
-        if ($this->modname === 'label') {
-            // special case, label returns already formatted content, see cm_info::__construct()
-            // and label_get_coursemodule_info()
-            return $this->content;
-        }
         // Improve filter performance by preloading filter setttings for all
         // activities on the course (this does nothing if called multiple
         // times)
@@ -1094,13 +1089,6 @@ class cm_info extends stdClass {
         $this->showdescription  = isset($mod->showdescription) ? $mod->showdescription : 0;
         $this->state = self::STATE_BASIC;
 
-        // This special case handles old label data. Labels used to use the 'name' field for
-        // content
-        if ($this->modname === 'label' && $this->content === '') {
-            $this->content = $this->extra;
-            $this->extra = '';
-        }
-
         // Note: These fields from $cm were not present in cm_info in Moodle
         // 2.0.2 and prior. They may not be available if course cache hasn't
         // been rebuilt since then.
@@ -1343,11 +1331,6 @@ class cm_info extends stdClass {
  */
 function get_fast_modinfo($courseorid, $userid = 0, $resetonly = false) {
     global $CFG, $USER;
-    require_once($CFG->dirroot.'/course/lib.php');
-
-    if (!empty($CFG->enableavailability)) {
-        require_once($CFG->libdir.'/conditionlib.php');
-    }
 
     static $cache = array();
 
@@ -1356,6 +1339,11 @@ function get_fast_modinfo($courseorid, $userid = 0, $resetonly = false) {
         debugging("Using the string 'reset' as the first argument of get_fast_modinfo() is deprecated. Use get_fast_modinfo(0,0,true) instead.", DEBUG_DEVELOPER);
         $courseorid = 0;
         $resetonly = true;
+    }
+
+    // Function get_fast_modinfo() can never be called during upgrade unless it is used for clearing cache only.
+    if (!$resetonly) {
+        upgrade_ensure_not_running();
     }
 
     if (is_object($courseorid)) {
@@ -1424,6 +1412,11 @@ function get_fast_modinfo($courseorid, $userid = 0, $resetonly = false) {
 function rebuild_course_cache($courseid=0, $clearonly=false) {
     global $COURSE, $SITE, $DB, $CFG;
 
+    // Function rebuild_course_cache() can not be called during upgrade unless it's clear only.
+    if (!$clearonly && !upgrade_ensure_not_running(true)) {
+        $clearonly = true;
+    }
+
     // Destroy navigation caches
     navigation_cache::destroy_volatile_caches();
 
@@ -1434,8 +1427,7 @@ function rebuild_course_cache($courseid=0, $clearonly=false) {
 
     if ($clearonly) {
         if (empty($courseid)) {
-            $DB->set_field('course', 'modinfo', null);
-            $DB->set_field('course', 'sectioncache', null);
+            $DB->execute('UPDATE {course} set modinfo = ?, sectioncache = ?', array(null, null));
         } else {
             // Clear both fields in one update
             $resetobj = (object)array('id' => $courseid, 'modinfo' => null, 'sectioncache' => null);
@@ -1491,8 +1483,8 @@ function rebuild_course_cache($courseid=0, $clearonly=false) {
  * Class that is the return value for the _get_coursemodule_info module API function.
  *
  * Note: For backward compatibility, you can also return a stdclass object from that function.
- * The difference is that the stdclass object may contain an 'extra' field (deprecated because
- * it was crazy, except for label which uses it differently). The stdclass object may not contain
+ * The difference is that the stdclass object may contain an 'extra' field (deprecated,
+ * use extraclasses and onclick instead). The stdclass object may not contain
  * the new fields defined here (content, extraclasses, customdata).
  */
 class cached_cm_info {
@@ -1713,6 +1705,7 @@ class section_info implements IteratorAggregate {
      */
     public function __construct($data, $number, $courseid, $sequence, $modinfo, $userid) {
         global $CFG;
+        require_once($CFG->dirroot.'/course/lib.php');
 
         // Data that is always present
         $this->_id = $data->id;
@@ -1750,6 +1743,7 @@ class section_info implements IteratorAggregate {
 
         // Availability data
         if (!empty($CFG->enableavailability)) {
+            require_once($CFG->libdir. '/conditionlib.php');
             // Get availability information
             $ci = new condition_info_section($this);
             $this->_available = $ci->is_available($this->_availableinfo, true,

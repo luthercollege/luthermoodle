@@ -71,6 +71,7 @@ class behat_util extends testing_util {
         $options['adminuser'] = 'admin';
         $options['adminpass'] = 'admin';
         $options['fullname'] = 'Acceptance test site';
+        $options['shortname'] = 'Acceptance test site';
 
         install_cli_database($options, false);
 
@@ -82,6 +83,9 @@ class behat_util extends testing_util {
         $user->city = 'Perth';
         $user->country = 'AU';
         $DB->update_record('user', $user);
+
+        // Disable email message processor.
+        $DB->set_field('message_processors', 'enabled', '0', array('name' => 'email'));
 
         // Sets maximum debug level.
         set_config('debug', DEBUG_DEVELOPER);
@@ -176,7 +180,9 @@ class behat_util extends testing_util {
         }
 
         // Checks the behat set up and the PHP version.
-        behat_command::check_behat_setup(true);
+        if ($errorcode = behat_command::behat_setup_problem(true)) {
+            exit($errorcode);
+        }
 
         // Check that test environment is correctly set up.
         self::test_environment_problem();
@@ -194,6 +200,26 @@ class behat_util extends testing_util {
         if (!file_put_contents($filepath, $contents)) {
             behat_error(BEHAT_EXITCODE_PERMISSIONS, 'File ' . $filepath . ' can not be created');
         }
+    }
+
+    /**
+     * Returns the status of the behat test environment
+     *
+     * @return int Error code
+     */
+    public static function get_behat_status() {
+
+        if (!defined('BEHAT_UTIL')) {
+            throw new coding_exception('This method can be only used by Behat CLI tool');
+        }
+
+        // Checks the behat set up and the PHP version, returning an error code if something went wrong.
+        if ($errorcode = behat_command::behat_setup_problem(true)) {
+            return $errorcode;
+        }
+
+        // Check that test environment is correctly set up, stops execution.
+        self::test_environment_problem();
     }
 
     /**
@@ -224,27 +250,12 @@ class behat_util extends testing_util {
      * To check is the current script is running in the test
      * environment
      *
-     * @see tool_behat::is_using_test_environment()
      * @return bool
      */
     public static function is_test_mode_enabled() {
 
         $testenvfile = self::get_test_file_path();
         if (file_exists($testenvfile)) {
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * Returns true if Moodle is currently running with the test database and dataroot
-     * @return bool
-     */
-    public static function is_using_test_environment() {
-        global $CFG;
-
-        if (!empty($CFG->originaldataroot)) {
             return true;
         }
 

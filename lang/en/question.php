@@ -25,6 +25,7 @@
 $string['addmorechoiceblanks'] = 'Blanks for {no} more choices';
 $string['addcategory'] = 'Add category';
 $string['adminreport'] = 'Report on possible problems in your question database.';
+$string['answers'] = 'Answers';
 $string['availableq'] = 'Available?';
 $string['badbase'] = 'Bad base before **: {$a}**';
 $string['behaviour'] = 'Behaviour';
@@ -90,6 +91,7 @@ affected will continue to work in all existing quizzes until you remove them fro
 $string['cwrqpfsnoprob'] = 'No question categories in your site are affected by the \'Random questions selecting questions from sub categories\' issue.';
 $string['defaultfor'] = 'Default for {$a}';
 $string['defaultinfofor'] = 'The default category for questions shared in context \'{$a}\'.';
+$string['defaultmarkmustbepositive'] = 'The default mark must be positive.';
 $string['deletebehaviourareyousure'] = 'Delete behaviour {$a}: are you sure?';
 $string['deletebehaviourareyousuremessage'] = 'You are about to completely delete the question behaviour {$a}. This will completely delete everything in the database associated with this question behaviour. Are you SURE you want to continue?';
 $string['deletecoursecategorywithquestions'] = 'There are questions in the question bank associated with this course category. If you proceed, they will be deleted. You may wish to move them first, using the question bank interface.';

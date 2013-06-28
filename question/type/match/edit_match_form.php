@@ -36,12 +36,15 @@ class qtype_match_edit_form extends question_edit_form {
 
     protected function get_per_answer_fields($mform, $label, $gradeoptions,
             &$repeatedoptions, &$answersoption) {
+        $mform->addElement('static', 'answersinstruct',
+                get_string('availablechoices', 'qtype_match'),
+                get_string('filloutthreeqsandtwoas', 'qtype_match'));
+
         $repeated = array();
-        $repeated[] = $mform->createElement('header', 'answerhdr', $label);
         $repeated[] = $mform->createElement('editor', 'subquestions',
-                get_string('question'), array('rows'=>3), $this->editoroptions);
+                $label, array('rows'=>3), $this->editoroptions);
         $repeated[] = $mform->createElement('text', 'subanswers',
-                get_string('answer', 'question'), array('size'=>50));
+                get_string('answer', 'question'), array('size' => 50, 'maxlength' => 255));
         $repeatedoptions['subquestions']['type'] = PARAM_RAW;
         $repeatedoptions['subanswers']['type'] = PARAM_TEXT;
         $answersoption = 'subquestions';
@@ -59,15 +62,17 @@ class qtype_match_edit_form extends question_edit_form {
         $mform->addHelpButton('shuffleanswers', 'shuffle', 'qtype_match');
         $mform->setDefault('shuffleanswers', 1);
 
-        $mform->addElement('static', 'answersinstruct',
-                get_string('availablechoices', 'qtype_match'),
-                get_string('filloutthreeqsandtwoas', 'qtype_match'));
-        $mform->closeHeaderBefore('answersinstruct');
-
         $this->add_per_answer_fields($mform, get_string('questionno', 'question', '{no}'), 0);
 
         $this->add_combined_feedback_fields(true);
         $this->add_interactive_settings(true, true);
+    }
+
+    /**
+     * Language string to use for 'Add {no} more {whatever we call answers}'.
+     */
+    protected function get_more_choices_string() {
+        return get_string('blanksforxmorequestions', 'qtype_match');
     }
 
     protected function data_preprocessing($question) {

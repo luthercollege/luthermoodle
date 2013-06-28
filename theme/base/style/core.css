@@ -1,7 +1,8 @@
 /**
- * Required to undo YUI resets that override input size
+ * Required to undo YUI resets that override input size, margin, etc.
  */
 input[type=text],input[type=password],textarea{width:auto;}
+input[type=checkbox],input[type=radio]{margin-right: 7px;}
 
 /* Fix for YUI overriding styles */
 strong{font-style:inherit;}em{font-weight:inherit;}
@@ -39,7 +40,9 @@ a.dimmed_text:visited,
 .usersuspended a:link,
 .usersuspended a:visited,
 .dimmed_category,
-.dimmed_category a {
+.dimmed_category a,
+.dimmed_category a:link,
+.dimmed_category a:visited {
     color: #AAA;
 }
 .activity.label .dimmed_text {
@@ -72,7 +75,7 @@ a.dimmed_text:visited,
 .notifysuccess {color:#006600;}
 .reportlink {text-align:right;}
 a.autolink.glossary:hover {cursor: help;}
-/* Block which is hidden if javascript enabled, prevents fickering visible when JS from footer used! */
+/* Block which is hidden if javascript enabled, prevents flickering, visible when JS from footer used! */
 .collapsibleregioncaption {white-space: nowrap;}
 .collapsibleregioncaption img {vertical-align: middle;}
 .jsenabled .hiddenifjs {display: none;}
@@ -107,7 +110,6 @@ img.iconkbhelp {height:17px;width:49px;}
 img.icon-pre, .dir-rtl img.icon-post { padding-right: 3px; padding-left: 0; }
 img.icon-post, .dir-rtl img.icon-pre { padding-left: 3px; padding-right: 0; }
 
-.categorybox .category {font-size:1.2em;font-weight:bold;}
 .generalbox {border:1px solid;}
 .boxaligncenter {margin-left:auto;margin-right:auto;}
 .boxalignright {margin-left:auto;margin-right:0;}
@@ -205,11 +207,16 @@ a.skip:active {position: static;display: block;}
 #page-footer .validators ul {margin:0px;padding:0px;list-style-type:none;}
 #page-footer .validators ul li {display:inline;margin-right:10px;margin-left:10px;}
 
-.performanceinfo .cachesused {margin-top:1em;}
-.performanceinfo .cachesused .cache-stats-heading {font-weight: bold;text-decoration: underline;font-size:110%;}
-.performanceinfo .cachesused .cache-definition-stats {font-weight:bold;margin-top:0.3em;}
-.performanceinfo .cachesused .cache-store-stats {text-indent: 1em;}
-.performanceinfo .cachesused .cache-total-stats {font-weight:bold;margin-top:0.3em;}
+#page-footer .performanceinfo .cachesused {margin-top:1em;}
+#page-footer .performanceinfo .cachesused .cache-stats-heading {font-weight:bold;display:block;}
+#page-footer .performanceinfo .cachesused .cache-definition-stats {margin:0.3em;padding:0px;border:1px solid #999;display:inline-block;vertical-align:top;min-height:4em;color:#000;background-color:#eee;}
+#page-footer .performanceinfo .cachesused .cache-definition-stats span {padding-left:0.5em;padding-right:0.5em;display:block;}
+#page-footer .performanceinfo .cachesused .cache-definition-stats .cache-definition-stats-heading {background-color:#eee;}
+#page-footer .performanceinfo .cachesused .cache-store-stats {text-indent: 1em;}
+#page-footer .performanceinfo .cachesused .cache-store-stats.nohits {background-color:#ffd3d9;}
+#page-footer .performanceinfo .cachesused .cache-store-stats.lowhits {background-color:#f3f2aa;}
+#page-footer .performanceinfo .cachesused .cache-store-stats.hihits {background-color:#e7f1c3;}
+#page-footer .performanceinfo .cachesused .cache-total-stats {display:block;font-weight:bold;margin-top:0.3em;}
 
 #course-footer {clear:both;}
 
@@ -226,49 +233,83 @@ a.skip:active {position: static;display: block;}
  * Mforms
  */
 .mform fieldset {border:1px solid;}
-.mform fieldset fieldset {border-width:0px;}
-.mform fieldset legend {font-weight:bold;margin-left:0.5em;}
+.mform fieldset fieldset {border-width:0;}
+.mform fieldset legend {font-weight:bold;margin-left:0.5em;padding: 0 0.35em;}
 .mform fieldset div {margin:10px;margin-top:0;}
 .mform fieldset div div {margin:0;}
 .mform fieldset .advancedbutton {text-align:right;}
 .mform fieldset.hidden {border-width:0;}
 .mform fieldset.group {margin-bottom: 0}
 .mform fieldset.error {border: 1px solid #A00;}
+.mform .collapsible-actions {display: none;}
+.jsenabled .mform .collapsible-actions {text-align: right; display: block;}
+.dir-rtl .mform .collapsible-actions {text-align: left;}
+.mform .collapseexpand {background: url([[pix:t/collapsed]]) left center no-repeat; padding-left: 18px;}
+.dir-rtl .mform .collapseexpand {background-image: url([[pix:t/collapsed_rtl]]); background-position: right center; padding-left: 0; padding-right: 18px;}
+.mform .collapse-all,
+.dir-rtl .mform .collapse-all {background-image: url([[pix:t/expanded]]);}
+.mform fieldset legend {padding: 0 0.35em;}
+.mform fieldset.collapsible legend a.fheader {padding-left: 18px; background: url([[pix:t/expanded]]) left center no-repeat;}
+.mform fieldset.collapsed legend a.fheader {background-image: url([[pix:t/collapsed]]);}
+.jsenabled .mform fieldset.collapsed {border-width: 1px 0 0 1px; padding: 0; border-color: transparent;}
+.jsenabled .mform fieldset.collapsed div.fcontainer {display: none;}
 .mform .fitem {width:100%;overflow:hidden;margin-top:5px;margin-bottom:1px;clear:right;}
+.jsenabled .mform .containsadvancedelements .advanced {display: none;}
+.mform .containsadvancedelements .advanced.show {display: block;}
 .mform .fitem .fitemtitle {width:15%;text-align:right;float:left;}
+.dir-rtl .mform .fitem .fitemtitle {text-align:left;}
 .mform .fitem .fitemtitle div {display: inline;}
 .mform .fitem .felement {border-width: 0;width:80%;margin-left:16%;}
 .mform .fitem fieldset.felement {margin-left:15%;padding-left:1%;margin-bottom:0}
-.dir-rtl .mform .fitem fieldset.felement {padding-right: 1%;margin-right: 15%;}
 .mform .error,
 .mform .required {color:#A00;}
 .mform .required .fgroup span label {color:#000;}
 .mform .fdescription.required {color:#A00;text-align:right;}
+.dir-rtl .mform .fdescription.required {text-align:left;}
 .mform .fpassword .unmask {display:inline;margin-left:0.5em;}
 .mform .ftextarea #id_alltext {width: 100%;}
 .mform ul.file-list {padding:0;margin:0;list-style:none;}
 .mform label .req,
 .mform label .adv {cursor: help;}
 .mform .fcheckbox input {margin-left: 0;}
+.mform .fcheckbox label,
+.mform .fduration label,
 .mform .fitem fieldset.fgroup label,
 .mform .fradio label,
-.mform .fcheckbox label,
-.mform fieldset.fdate_selector label {display:inline;float: none;width: auto;}
+.mform fieldset.fdate_selector label,
+.mform fieldset.fdate_time_selector label {display:inline; float:none; margin-left:.3em; vertical-align:baseline;}
+.dir-rtl .mform .fcheckbox label,
+.dir-rtl .mform .fduration label,
+.dir-rtl .mform .fitem fieldset.fgroup label,
+.dir-rtl .mform .fradio label,
+.dir-rtl .mform fieldset.fdate_selector label,
+.dir-rtl .mform fieldset.fdate_time_selector label {margin-right: .3em; margin-left: 0;}
 .mform .ftags label.accesshide {display: block;position: static;}
 .mform .ftags select {margin-bottom: 0.7em;min-width: 22em;}
+.mform .moreless-toggler {background: url([[pix:t/more]]) left center no-repeat; padding-left: 16px;}
+.dir-rtl .moreless-toggler {padding-left: 0; padding-right: 16px; background-position: right center; }
+.mform .moreless-less {background-image: url([[pix:t/less]]);}
 .mform .helplink img { margin: 0 0 0 .45em; padding: 0;}
 .dir-rtl .mform .helplink img { margin: 0 .45em 0 0; padding: 0;}
 .mform legend .helplink img { margin-right: .2em; }
 .dir-rtl .mform legend .helplink img { margin: 0 .45em 0 .2em; }
+.urlselect label,
 .singleselect label { margin-right: .3em; }
+.dir-rtl .urlselect label,
 .dir-rtl .singleselect label { margin-left: .3em; margin-right: 0; }
 
-input#id_externalurl {direction:ltr;}
+.dir-rtl .mform fieldset legend {margin-right:0.5em; margin-left: 0;}
+.dir-rtl .mform fieldset.collapsible legend a.fheader {background-position: right center; padding-right: 18px; padding-left: 0;}
+.dir-rtl .mform fieldset.collapsed legend a.fheader {background-image: url([[pix:t/collapsed_rtl]]); }
+.dir-rtl.jsenabled .mform fieldset.collapsed {border-width: 1px 1px 0 0; }
+.dir-rtl .mform .fitem fieldset.felement {padding-right: 1%;margin-right: 15%;}
 
-/** Browser corrections for mforms **/
-.ie .mform .fitem .felement {margin-left:0;text-align:left;float:left;}
-/** Fix IE double margin + float bugs **/
-.ie .mform .fitem .fitemtitle {padding-right:1em;}
+.mform .btn-cancel, .mform .btn-cancel:active, .mform .btn-cancel[disabled] { background-color: transparent; background-image: none; box-shadow: none; -moz-box-shadow: none; -webkit-box-shadow: none; -o-box-shadow: none; -ms-box-shadow: none; margin-left: .5em;}
+.mform .btn-cancel { border-color: transparent; border-radius: 0 0 0 0; -moz-border-radius: 0 0 0 0; -webkit-border-radius: 0 0 0 0; -o-border-radius: 0 0 0 0; -ms-border-radius: 0 0 0 0; color: #0088CC; cursor: pointer; }
+.mform .btn-cancel:hover, .mform .btn-cancel:focus { background-color: transparent; color: #005580; text-decoration: underline; }
+.mform .btn-cancel[disabled]:hover, .mform .btn-cancel[disabled]:focus { color: #333333; text-decoration: none; }
+
+input#id_externalurl {direction:ltr;}
 #portfolio-add-button {display:inline;}
 
 /**
@@ -363,19 +404,6 @@ input#id_externalurl {direction:ltr;}
  */
 .mod_introbox {border:1px solid;padding:10px;}
 table.mod_index {width:100%;}
-
-/**
- * Help
- */
-#help_icon_tooltip div.bd {width: 35em;}
-#help hr {border: none;height: 1px;background: #ccc;}
-#help .center {text-align: center;}
-#help .moreinfo {text-align: right;}
-#help .indent {margin-left: 40px;}
-#help .indent-big {margin-left: 160px;margin-right: 160px;}
-#help #emoticons{text-align: center;clear:both;width: 300px;margin-right: auto;margin-left:auto;}
-#help #emoticons ul{list-style-type: none;}
-#help #emoticons li{margin-bottom: 3px;width: 120px;border-left: 3px solid gray;padding-left: 7px;float: left;}
 
 /**
  * Comments
@@ -516,18 +544,6 @@ body.tag .managelink {padding: 5px;}
 #webservice-doc-generator td {text-align: left;border: 0px solid black;}
 
 /**
- * Help Content (pop-up)
- */
-#helppopupbox {background-color: #eee; border: 1px solid #848484;z-index: 10000 !important;}
-#helppopupbox .yui3-widget-hd {float:right;margin:3px 3px 0 0;}
-#helppopupbox .yui3-widget-bd {margin:0 1em 1em 1em;border-top:1px solid #eee;}
-#helppopupbox .yui3-widget-ft {text-align: center;}
-#helppopupbox .yui3-widget-ft .closebtn {margin:0 1em 1em 1em;}
-#helppopupbox .helpheading {font-size: 1em;}
-#helppopupbox .spinner {margin:1em;}
-.dir-rtl #helppopupbox .yui3-widget-hd {float:left;margin:3px 0 0 3px;}
-
-/**
  * Custom menu
  */
 #custommenu {clear:both;}
@@ -617,11 +633,22 @@ body.tag .managelink {padding: 5px;}
 .userenrolment .col_enrol .enrolment {float:left;padding:3px;margin:3px;}
 .userenrolment .col_enrol .enrolment a {float:right;margin-left:3px;}
 #page-enrol-users .enrol_user_buttons {float:right;}
+#page-enrol-users .enrol_user_buttons .singlebutton {margin-top: 2px; line-height: 2;}
 #page-enrol-users .enrol_user_buttons .enrolusersbutton {margin-left:1em;display:inline;}
 #page-enrol-users .enrol_user_buttons .enrolusersbutton div,
 #page-enrol-users .enrol_user_buttons .enrolusersbutton form {display:inline;}
 #page-enrol-users .enrol_user_buttons .enrolusersbutton input {padding-left:6px;padding-right:6px;}
 #page-enrol-users.dir-rtl .col_userdetails .subfield_picture {float: right;}
+#page-enrol-users #filterform div,
+#page-enrol-users #filterform fieldset {display:inline;float:none;clear:none;width:auto;margin:0;line-height:2;}
+#page-enrol-users #filterform .fitem {white-space:nowrap;}
+#page-enrol-users #filterform fieldset > div {display:block;float:left;background:#f2f2f2;padding:2px;}
+#page-enrol-users #filterform select,
+#page-enrol-users #filterform .ftext input {width:8em;}
+#page-enrol-users #filterform #fitem_id_role,
+#page-enrol-users #filterform #fitem_id_ifilter,
+#page-enrol-users #filterform #fgroup_id_buttons {margin-left:0.5em;}
+#page-enrol-users .paging { clear: right; }
 
 /**
 * Overide for RTL layout
@@ -672,11 +699,6 @@ body.tag .managelink {padding: 5px;}
 
 .corelightbox {background-color:#CCC;position:absolute;top:0;left:0;width:100%;height:100%;text-align:center;}
 .corelightbox img {position:fixed;top:50%; left: 50%;}
-
-/**
- * IE - Overide for RTL layout
- */
-.ie.dir-rtl .mform .fitem .felement {margin-right:0;text-align:right;float:right;}
 
 .mod-indent-1 {margin-left:30px;}
 .mod-indent-2 {margin-left:60px;}
@@ -878,7 +900,7 @@ sup {vertical-align: super;}
     background: none;
     border: none;
     /* Override the z-index set incorrectly by the YUI dialogue */
-    z-index: 600!important;
+    z-index: 600;
 }
 
 
@@ -1019,6 +1041,24 @@ sup {vertical-align: super;}
     padding-bottom:4px;
 }
 
+.moodle-dialogue .moodle-dialogue-bd .content-lightbox {
+    opacity: .75;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    background-color: white;
+    text-align: center;
+    padding: 10% 0;
+}
+
+/* Apply a default max-height on tooltip text */
+.moodle-dialogue .tooltiptext {
+    max-height: 300px;
+}
+.moodle-dialogue-base .moodle-dialogue.moodle-dialogue-tooltip {
+    z-index: 3001;
+}
 
 /* Question Bank - Question Chooser "Close" button */
 #page-question-edit.dir-rtl a.container-close {right:auto;left:6px;}
@@ -1199,3 +1239,136 @@ html[dir=rtl] .configphp {direction:ltr;text-align:left;}
 
 table.flexible .r0, table.generaltable .r0 {background-color: #F0F0F0;}
 table.flexible .r1, table.generaltable .r1 {background-color: #FAFAFA;}
+
+/* Form element: listing */
+.formlistingradio {padding-bottom: 25px; padding-right: 10px;}
+.formlistinginputradio {float: left;}
+.formlistingmain {min-height: 225px;}
+.formlistingradiocontent {}
+.formlisting {
+    position: relative;
+    margin: 15px 0;
+    padding: 1px 19px 14px;
+    background-color: white;
+    border: 1px solid #DDD;
+    -webkit-border-radius: 4px;
+    -moz-border-radius: 4px;
+    border-radius: 4px;
+}
+
+.formlistingmore {
+    position: absolute;
+    cursor: pointer;
+    bottom: -1px;
+    right: -1px;
+    padding: 3px 7px;
+    font-size: 12px;
+    font-weight: bold;
+    background-color: whiteSmoke;
+    border: 1px solid #DDD;
+    color: #9DA0A4;
+    -webkit-border-radius: 4px 0 4px 0;
+    -moz-border-radius: 4px 0 4px 0;
+    border-radius: 4px 0 4px 0;
+}
+
+.formlistingall {
+    margin: 15px 0;
+    padding: 0px 0px 0px;
+    -webkit-border-radius: 4px;
+    -moz-border-radius: 4px;
+    border-radius: 4px;
+}
+
+.formlistingrow {
+    cursor: pointer;
+    border-bottom: 1px solid;
+    border-color: #E1E1E8;
+    border-left: 1px solid #E1E1E8;
+    border-right: 1px solid #E1E1E8;
+    background-color: #F7F7F9;
+    -webkit-border-radius: 0px 0px 4px 4px;
+    -moz-border-radius: 0px 0px 4px 4px;
+    padding: 6px;
+    top: 50%;
+    left: 50%;
+    min-height: 34px;
+    float:left;
+    width: 150px;
+}
+
+body.jsenabled .formlistingradio {
+    display: none;
+}
+
+body.jsenabled .formlisting {
+    display: block;
+}
+
+/**
+ * Badges styles
+ */
+#page-badges-view .collection { width: 90%; margin: 1em auto; }
+#page-badges-index .collection { width: 85%; margin: 1em auto; }
+
+table.collection th { font-size: inherit !important; border-width: 1px; border-style: solid; border-color: #CCCCCC; vertical-align: middle; padding-left: 5px; padding-right: 5px; vertical-align: top; text-align: center !important; }
+table.collection td { border-width: 1px; border-style: solid; border-color: #CCCCCC; vertical-align: middle; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+table.collection .r1 { background-color: #FFFFFF; }
+table.collection .r0 { background-color: #F6F6F6; }
+table.collection ul { margin: 0.5em 0.5em 0.5em 2em; }
+
+#page-badges-view table.collection .badgeimage,
+#page-badges-index table.collection .status { width: 15%; text-align: center; vertical-align: middle; }
+#page-badges-view table.collection .awards,
+#page-badges-index table.collection .awards { width: 10%; text-align: center; vertical-align: middle; }
+#page-badges-view table.collection .description { width: 25%; text-align: left; }
+
+table.collection .name { text-align: left; vertical-align: middle; }
+#page-badges-view table.collection .criteria { width: 35%; text-align: left; vertical-align: top; }
+#page-badges-index table.collection .criteria { width: 40%; text-align: left; vertical-align: top; }
+#page-badges-index table.collection .actions { width: 11em; text-align: center; vertical-align: middle; }
+
+a.criteria-action { padding: 0px 3px; float: right; }
+table.issuedbadgebox { width: 750px; background-color: white; }
+table.badgeissuedimage { width: 150px; text-align: center; }
+table.badgeissuedinfo { width: 600px; }
+table.badgeissuedinfo .bvalue { text-align: left; vertical-align: middle; }
+table.badgeissuedinfo .bfield { width: 125px; text-align: left; font-style: italic; }
+
+ul.badges { margin: 0; list-style: none; }
+.badges li { position: relative; display: inline-block; padding-bottom: 2em; text-align: center; vertical-align: top; width: 150px; }
+.badges li .badge-name { display: block; padding: 5px; }
+.badges li > img { position: absolute; }
+.badges li .badge-image { width: 90px; height: 90px; left: 10px; top: 0px; z-index: 1; }
+.badges li .badge-actions { position: relative; }
+
+div.badge { position: relative; display: block; }
+div.badge .expireimage { width: 100px; height: 100px; left: 20px; top: 0px; }
+.expireimage { width: 90px; height: 90px; left: 30px; top: 0px; position: absolute; z-index:10; filter: alpha(opacity = 85); -moz-opacity: 0.85; -khtml-opacity: 0.85; opacity: 0.85;}
+
+.badge-profile { vertical-align: top; }
+.connected { color: #006600; }
+.notconnected { color: #660000; }
+
+#page-badges-award .recipienttable { background-color: #EEEEEE; border: 1px solid #BBBBBB; width: 100%; vertical-align: top; }
+#page-badges-award .recipienttable tr td { vertical-align: top; }
+#page-badges-award .recipienttable tr td.actions { width: 16%; padding-top: 3em; }
+#page-badges-award .recipienttable tr td.actions .actionbutton { margin: 0.3em 0; padding: 0.5em 0; width: 100%; }
+#page-badges-award .recipienttable tr td.existing,
+#page-badges-award .recipienttable tr td.potential { width: 42%; }
+
+.statustable { margin-bottom: 0px; }
+.statusbox { border-color: #BBBBBB; }
+.statusbox.active { background-color: #D9F991; }
+.statusbox.inactive { background-color: #FFEBA8; }
+.activatebadge { margin: 0px; text-align: left; vertical-align: middle; }
+.addcourse { float: right; }
+
+/**
+ * The date selector popup.
+ */
+ div#dateselector-calendar-panel {
+     z-index: 3100; /* Set higher than the z-index of the filemanager - see MDL-39047. */
+ }
+
+.path-mod-lesson .centerpadded { padding: 5px; text-align: center; }

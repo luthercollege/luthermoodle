@@ -38,9 +38,11 @@
             <directory suffix="_test.php">lib/tests</directory>
             <directory suffix="_test.php">lib/ajax/tests</directory>
             <directory suffix="_test.php">lib/form/tests</directory>
+            <directory>lib/password_compat/tests</directory>
         </testsuite>
         <testsuite name="core_files">
             <directory suffix="_test.php">lib/filestorage/tests</directory>
+            <directory suffix="_test.php">files/tests</directory>
         </testsuite>
         <testsuite name="core_cohort">
             <directory suffix="_test.php">cohort/tests</directory>
@@ -54,6 +56,9 @@
             <directory suffix="_test.php">backup/controller/tests</directory>
             <directory suffix="_test.php">backup/converter/moodle1/tests</directory>
             <directory suffix="_test.php">backup/util</directory>
+        </testsuite>
+        <testsuite name="core_badges">
+            <directory suffix="_test.php">badges/tests</directory>
         </testsuite>
         <testsuite name="core_blog">
             <directory suffix="_test.php">blog/tests</directory>

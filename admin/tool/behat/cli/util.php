@@ -43,12 +43,16 @@ list($options, $unrecognized) = cli_get_params(
         'drop'    => false,
         'enable'  => false,
         'disable' => false,
+        'diag'    => false
     ),
     array(
         'h' => 'help'
     )
 );
 
+if ($options['install'] or $options['drop']) {
+    define('CACHE_DISABLE_ALL', true);
+}
 
 // Checking util.php CLI script usage.
 $help = "
@@ -59,6 +63,7 @@ Options:
 --drop     Drops the database tables and the dataroot contents
 --enable   Enables test environment and updates tests list
 --disable  Disables test environment
+--diag     Get behat test environment status code
 
 -h, --help     Print out this help
 
@@ -84,22 +89,21 @@ error_reporting(E_ALL | E_STRICT);
 ini_set('display_errors', '1');
 ini_set('log_errors', '1');
 
+// Getting $CFG data.
 require_once(__DIR__ . '/../../../../config.php');
 
 // CFG->behat_prefix must be set and with value different than CFG->prefix and phpunit_prefix.
-if (!isset($CFG->behat_prefix) ||
-   (isset($CFG->behat_prefix) &&
-       ($CFG->behat_prefix == $CFG->prefix ||
-       $CFG->behat_prefix == $CFG->phpunit_prefix))) {
+if (empty($CFG->behat_prefix) ||
+       ($CFG->behat_prefix == $CFG->prefix) ||
+       (!empty($CFG->phpunit_prefix) && $CFG->behat_prefix == $CFG->phpunit_prefix)) {
     behat_error(BEHAT_EXITCODE_CONFIG,
         'Define $CFG->behat_prefix in config.php with a value different than $CFG->prefix and $CFG->phpunit_prefix');
 }
 
 // CFG->behat_dataroot must be set and with value different than CFG->dataroot and phpunit_dataroot.
-if (!isset($CFG->behat_dataroot) ||
-   (isset($CFG->behat_dataroot) &&
-       ($CFG->behat_dataroot == $CFG->dataroot ||
-       $CFG->behat_dataroot == $CFG->phpunit_dataroot))) {
+if (empty($CFG->behat_dataroot) ||
+       ($CFG->behat_dataroot == $CFG->dataroot) ||
+       (!empty($CFG->phpunit_dataroot) && $CFG->behat_dataroot == $CFG->phpunit_dataroot)) {
     behat_error(BEHAT_EXITCODE_CONFIG,
         'Define $CFG->behat_dataroot in config.php with a value different than $CFG->dataroot and $CFG->phpunit_dataroot');
 }
@@ -141,6 +145,13 @@ foreach ($vars as $var) {
 $CFG->noemailever = true;
 $CFG->passwordsaltmain = 'moodle';
 
+$CFG->themerev = 1;
+$CFG->jsrev = 1;
+
+// Unset cache and temp directories to reset them again with the new $CFG->dataroot.
+unset($CFG->cachedir);
+unset($CFG->tempdir);
+
 // Continues setup.
 define('ABORT_AFTER_CONFIG_CANCEL', true);
 require("$CFG->dirroot/lib/setup.php");
@@ -150,6 +161,7 @@ require_once($CFG->libdir.'/upgradelib.php');
 require_once($CFG->libdir.'/clilib.php');
 require_once($CFG->libdir.'/pluginlib.php');
 require_once($CFG->libdir.'/installlib.php');
+require_once($CFG->libdir.'/testing/classes/test_lock.php');
 
 if ($unrecognized) {
     $unrecognized = implode("\n  ", $unrecognized);
@@ -165,6 +177,8 @@ if ($options['install']) {
     behat_util::install_site();
     mtrace("Acceptance tests site installed");
 } else if ($options['drop']) {
+    // Ensure no tests are running.
+    test_lock::acquire('behat');
     behat_util::drop_site();
     mtrace("Acceptance tests site dropped");
 } else if ($options['enable']) {
@@ -175,6 +189,9 @@ if ($options['install']) {
 } else if ($options['disable']) {
     behat_util::stop_test_mode();
     mtrace("Acceptance tests environment disabled");
+} else if ($options['diag']) {
+    $code = behat_util::get_behat_status();
+    exit($code);
 } else {
     echo $help;
 }

@@ -85,20 +85,12 @@ class assign_submission_file extends assign_submission_plugin {
                               'maxfilessubmission',
                               'assignsubmission_file');
         $mform->setDefault('assignsubmission_file_maxfiles', $defaultmaxfilesubmissions);
-        $mform->disabledIf('assignsubmission_file_maxfiles', 'assignsubmission_file_enabled', 'eq', 0);
+        $mform->disabledIf('assignsubmission_file_maxfiles', 'assignsubmission_file_enabled', 'notchecked');
 
         $choices = get_max_upload_sizes($CFG->maxbytes,
                                         $COURSE->maxbytes,
                                         get_config('assignsubmission_file', 'maxbytes'));
 
-        // Remove the option for 0 bytes.
-        unset($choices[0]);
-
-        if ($COURSE->maxbytes == 0) {
-            $choices = array(0=>get_string('siteuploadlimit', 'assignsubmission_file')) + $choices;
-        } else {
-            $choices = array(0=>get_string('courseuploadlimit') . ' (' . display_size($COURSE->maxbytes) . ')') + $choices;
-        }
         $settings[] = array('type' => 'select',
                             'name' => 'maxsubmissionsizebytes',
                             'description' => get_string('maximumsubmissionsize', 'assignsubmission_file'),
@@ -113,7 +105,7 @@ class assign_submission_file extends assign_submission_plugin {
         $mform->setDefault('assignsubmission_file_maxsizebytes', $defaultmaxsubmissionsizebytes);
         $mform->disabledIf('assignsubmission_file_maxsizebytes',
                            'assignsubmission_file_enabled',
-                           'eq', 0);
+                           'notchecked');
     }
 
     /**
@@ -457,4 +449,35 @@ class assign_submission_file extends assign_submission_plugin {
         return array(ASSIGNSUBMISSION_FILE_FILEAREA=>$this->get_name());
     }
 
+    /**
+     * Copy the student's submission from a previous submission. Used when a student opts to base their resubmission
+     * on the last submission.
+     * @param stdClass $sourcesubmission
+     * @param stdClass $destsubmission
+     */
+    public function copy_submission(stdClass $sourcesubmission, stdClass $destsubmission) {
+        global $DB;
+
+        // Copy the files across.
+        $contextid = $this->assignment->get_context()->id;
+        $fs = get_file_storage();
+        $files = $fs->get_area_files($contextid,
+                                     'assignsubmission_file',
+                                     ASSIGNSUBMISSION_FILE_FILEAREA,
+                                     $sourcesubmission->id,
+                                     'id',
+                                     false);
+        foreach ($files as $file) {
+            $fieldupdates = array('itemid' => $destsubmission->id);
+            $fs->create_file_from_storedfile($fieldupdates, $file);
+        }
+
+        // Copy the assignsubmission_file record.
+        if ($filesubmission = $this->get_file_submission($sourcesubmission->id)) {
+            unset($filesubmission->id);
+            $filesubmission->submission = $destsubmission->id;
+            $DB->insert_record('assignsubmission_file', $filesubmission);
+        }
+        return true;
+    }
 }

@@ -1,5 +1,4 @@
 <?php
-
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -18,7 +17,7 @@
 /**
  * This file is responsible for serving the one theme and plugin images.
  *
- * @package   moodlecore
+ * @package   core
  * @copyright 2009 Petr Skoda (skodak)  {@link http://skodak.org}
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -114,7 +113,7 @@ if ($rev > -1) {
             header('Expires: '. gmdate('D, d M Y H:i:s', time() + $lifetime) .' GMT');
             header('Cache-Control: public, max-age='.$lifetime);
             header('Content-Type: '.$mimetype);
-            header('Etag: '.$etag);
+            header('Etag: "'.$etag.'"');
             die;
         }
         send_cached_image($cacheimage, $etag);
@@ -206,7 +205,7 @@ function send_cached_image($imagepath, $etag) {
 
     $mimetype = get_contenttype_from_ext($pathinfo['extension']);
 
-    header('Etag: '.$etag);
+    header('Etag: "'.$etag.'"');
     header('Content-Disposition: inline; filename="'.$imagename.'"');
     header('Last-Modified: '. gmdate('D, d M Y H:i:s', filemtime($imagepath)) .' GMT');
     header('Expires: '. gmdate('D, d M Y H:i:s', time() + $lifetime) .' GMT');

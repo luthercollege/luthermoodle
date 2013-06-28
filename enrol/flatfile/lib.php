@@ -138,10 +138,11 @@ class enrol_flatfile_plugin extends enrol_plugin {
      * @param int $timestart 0 means unknown
      * @param int $timeend 0 means forever
      * @param int $status default to ENROL_USER_ACTIVE for new enrolments, no change by default in updates
+     * @param bool $recovergrades restore grade history
      * @return void
      */
-    public function enrol_user(stdClass $instance, $userid, $roleid = null, $timestart = 0, $timeend = 0, $status = null) {
-        parent::enrol_user($instance, $userid, null, $timestart, $timeend, $status);
+    public function enrol_user(stdClass $instance, $userid, $roleid = null, $timestart = 0, $timeend = 0, $status = null, $recovergrades = null) {
+        parent::enrol_user($instance, $userid, null, $timestart, $timeend, $status, $recovergrades);
         if ($roleid) {
             $context = context_course::instance($instance->courseid, MUST_EXIST);
             role_assign($roleid, $userid, $context->id, 'enrol_'.$this->get_name(), $instance->id);
@@ -310,7 +311,7 @@ class enrol_flatfile_plugin extends enrol_plugin {
                 }
                 $roleid = $rolemap[$fields[1]];
 
-                if (!$user = $DB->get_record("user", array("idnumber"=>$fields[2]))) {
+                if (empty($fields[2]) or !$user = $DB->get_record("user", array("idnumber"=>$fields[2]))) {
                     $trace->output("Unknown user idnumber in field 3 - ignoring line $line", 1);
                     continue;
                 }

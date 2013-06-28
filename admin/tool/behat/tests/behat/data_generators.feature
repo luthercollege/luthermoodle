@@ -1,7 +1,7 @@
-@tool_behat
+@tool @tool_behat
 Feature: Set up contextual data for tests
   In order to write tests quickly
-  As a moodle developer
+  As a developer
   I need to fill the database with fixtures
 
   Scenario: Add a bunch of users
@@ -102,8 +102,8 @@ Feature: Set up contextual data for tests
     Then the "groups" select box should contain "Group 1 (1)"
     And the "groups" select box should contain "Group 2 (1)"
     And I select "Group 1 (1)" from "groups"
-    And I wait "1" seconds
+    And I wait "5" seconds
     And the "members" select box should contain "Student 1"
     And I select "Group 2 (1)" from "groups"
-    And I wait "1" seconds
+    And I wait "5" seconds
     And the "members" select box should contain "Student 2"

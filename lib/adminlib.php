@@ -321,6 +321,13 @@ function uninstall_plugin($type, $name) {
     // remove event handlers and dequeue pending events
     events_uninstall($component);
 
+    // Delete all remaining files in the filepool owned by the component.
+    $fs = get_file_storage();
+    $fs->delete_component_files($component);
+
+    // Finally purge all caches.
+    purge_all_caches();
+
     echo $OUTPUT->notification(get_string('success'), 'notifysuccess');
 }
 
@@ -802,11 +809,16 @@ interface parentable_part_of_admin_tree extends part_of_admin_tree {
  * $this->name. If it doesn't, add should be called on child objects that are
  * also parentable_part_of_admin_tree's.
  *
+ * $something should be appended as the last child in the $destinationname. If the
+ * $beforesibling is specified, $something should be prepended to it. If the given
+ * sibling is not found, $something should be appended to the end of $destinationname
+ * and a developer debugging message should be displayed.
+ *
  * @param string $destinationname The internal name of the new parent for $something.
  * @param part_of_admin_tree $something The object to be added.
  * @return bool True on success, false on failure.
  */
-    public function add($destinationname, $something);
+    public function add($destinationname, $something, $beforesibling = null);
 
 }
 
@@ -859,7 +871,7 @@ class admin_category implements parentable_part_of_admin_tree {
      *                  defaults to false
      */
     public function locate($name, $findpath=false) {
-        if (is_array($this->category_cache) and !isset($this->category_cache[$this->name])) {
+        if (!isset($this->category_cache[$this->name])) {
             // somebody much have purged the cache
             $this->category_cache[$this->name] = $this;
         }
@@ -873,7 +885,7 @@ class admin_category implements parentable_part_of_admin_tree {
         }
 
         // quick category lookup
-        if (!$findpath and is_array($this->category_cache) and isset($this->category_cache[$name])) {
+        if (!$findpath and isset($this->category_cache[$name])) {
             return $this->category_cache[$name];
         }
 
@@ -926,11 +938,9 @@ class admin_category implements parentable_part_of_admin_tree {
         foreach($this->children as $precedence => $child) {
             if ($child->name == $name) {
                 // clear cache and delete self
-                if (is_array($this->category_cache)) {
-                    while($this->category_cache) {
-                        // delete the cache, but keep the original array address
-                        array_pop($this->category_cache);
-                    }
+                while($this->category_cache) {
+                    // delete the cache, but keep the original array address
+                    array_pop($this->category_cache);
                 }
                 unset($this->children[$precedence]);
                 return true;
@@ -944,11 +954,18 @@ class admin_category implements parentable_part_of_admin_tree {
     /**
      * Adds a part_of_admin_tree to a child or grandchild (or great-grandchild, and so forth) of this object.
      *
+     * By default the new part of the tree is appended as the last child of the parent. You
+     * can specify a sibling node that the new part should be prepended to. If the given
+     * sibling is not found, the part is appended to the end (as it would be by default) and
+     * a developer debugging message is displayed.
+     *
+     * @throws coding_exception if the $beforesibling is empty string or is not string at all.
      * @param string $destinationame The internal name of the immediate parent that we want for $something.
      * @param mixed $something A part_of_admin_tree or setting instance to be added.
+     * @param string $beforesibling The name of the parent's child the $something should be prepended to.
      * @return bool True if successfully added, false if $something can not be added.
      */
-    public function add($parentname, $something) {
+    public function add($parentname, $something, $beforesibling = null) {
         $parent = $this->locate($parentname);
         if (is_null($parent)) {
             debugging('parent does not exist!');
@@ -965,8 +982,33 @@ class admin_category implements parentable_part_of_admin_tree {
                 // It is intentional to check for the debug level before performing the check.
                 debugging('Duplicate admin page name: ' . $something->name, DEBUG_DEVELOPER);
             }
-            $parent->children[] = $something;
-            if (is_array($this->category_cache) and ($something instanceof admin_category)) {
+            if (is_null($beforesibling)) {
+                // Append $something as the parent's last child.
+                $parent->children[] = $something;
+            } else {
+                if (!is_string($beforesibling) or trim($beforesibling) === '') {
+                    throw new coding_exception('Unexpected value of the beforesibling parameter');
+                }
+                // Try to find the position of the sibling.
+                $siblingposition = null;
+                foreach ($parent->children as $childposition => $child) {
+                    if ($child->name === $beforesibling) {
+                        $siblingposition = $childposition;
+                        break;
+                    }
+                }
+                if (is_null($siblingposition)) {
+                    debugging('Sibling '.$beforesibling.' not found', DEBUG_DEVELOPER);
+                    $parent->children[] = $something;
+                } else {
+                    $parent->children = array_merge(
+                        array_slice($parent->children, 0, $siblingposition),
+                        array($something),
+                        array_slice($parent->children, $siblingposition)
+                    );
+                }
+            }
+            if ($something instanceof admin_category) {
                 if (isset($this->category_cache[$something->name])) {
                     debugging('Duplicate admin category name: '.$something->name);
                 } else {
@@ -1652,6 +1694,24 @@ abstract class admin_setting {
     }
 
     /**
+     * Execute postupdatecallback if necessary.
+     * @param mixed $original original value before write_setting()
+     * @return bool true if changed, false if not.
+     */
+    public function post_write_settings($original) {
+        // Comparison must work for arrays too.
+        if (serialize($original) === serialize($this->get_setting())) {
+            return false;
+        }
+
+        $callbackfunction = $this->updatedcallback;
+        if (!empty($callbackfunction) and function_exists($callbackfunction)) {
+            $callbackfunction($this->get_full_name());
+        }
+        return true;
+    }
+
+    /**
      * Is setting related to query text - used when searching
      * @param string $query
      * @return bool
@@ -1883,7 +1943,7 @@ class admin_setting_configtextarea extends admin_setting_configtext {
         }
 
         return format_admin_setting($this, $this->visiblename,
-        '<div class="form-textarea" ><textarea rows="'. $this->rows .'" cols="'. $this->cols .'" id="'. $this->get_id() .'" name="'. $this->get_full_name() .'">'. s($data) .'</textarea></div>',
+        '<div class="form-textarea" ><textarea rows="'. $this->rows .'" cols="'. $this->cols .'" id="'. $this->get_id() .'" name="'. $this->get_full_name() .'" spellcheck="true">'. s($data) .'</textarea></div>',
         $this->description, true, '', $defaultinfo, $query);
     }
 }
@@ -1929,7 +1989,7 @@ class admin_setting_confightmleditor extends admin_setting_configtext {
         $editor->use_editor($this->get_id(), array('noclean'=>true));
 
         return format_admin_setting($this, $this->visiblename,
-        '<div class="form-textarea"><textarea rows="'. $this->rows .'" cols="'. $this->cols .'" id="'. $this->get_id() .'" name="'. $this->get_full_name() .'">'. s($data) .'</textarea></div>',
+        '<div class="form-textarea"><textarea rows="'. $this->rows .'" cols="'. $this->cols .'" id="'. $this->get_id() .'" name="'. $this->get_full_name() .'" spellcheck="true">'. s($data) .'</textarea></div>',
         $this->description, true, '', $defaultinfo, $query);
     }
 }
@@ -2045,6 +2105,16 @@ class admin_setting_configfile extends admin_setting_configtext {
         '<div class="form-file defaultsnext"><input type="text" size="'.$this->size.'" id="'.$this->get_id().'" name="'.$this->get_full_name().'" value="'.s($data).'" />'.$executable.'</div>',
         $this->description, true, '', $default, $query);
     }
+    /**
+     * checks if execpatch has been disabled in config.php
+     */
+    public function write_setting($data) {
+        global $CFG;
+        if (!empty($CFG->preventexecpath)) {
+            return '';
+        }
+        return parent::write_setting($data);
+    }
 }
 
 
@@ -2063,6 +2133,7 @@ class admin_setting_configexecutable extends admin_setting_configfile {
      * @return string XHTML field
      */
     public function output_html($data, $query='') {
+        global $CFG;
         $default = $this->get_defaultsetting();
 
         if ($data) {
@@ -2073,6 +2144,9 @@ class admin_setting_configexecutable extends admin_setting_configfile {
             }
         } else {
             $executable = '';
+        }
+        if (!empty($CFG->preventexecpath)) {
+            $this->visiblename .= '<div class="form-overridden">'.get_string('execpathnotallowed', 'admin').'</div>';
         }
 
         return format_admin_setting($this, $this->visiblename,
@@ -3231,7 +3305,7 @@ class admin_setting_sitesetselect extends admin_setting_configselect {
      * @return string empty or error message
      */
     public function write_setting($data) {
-        global $DB, $SITE;
+        global $DB, $SITE, $COURSE;
         if (!in_array($data, array_keys($this->choices))) {
             return get_string('errorsetting', 'admin');
         }
@@ -3240,10 +3314,19 @@ class admin_setting_sitesetselect extends admin_setting_configselect {
         $temp                 = $this->name;
         $record->$temp        = $data;
         $record->timemodified = time();
-        // update $SITE
-        $SITE->{$this->name} = $data;
+
         course_get_format($SITE)->update_course_format_options($record);
-        return ($DB->update_record('course', $record) ? '' : get_string('errorsetting', 'admin'));
+        $DB->update_record('course', $record);
+
+        // Reset caches.
+        $SITE = $DB->get_record('course', array('id'=>$SITE->id), '*', MUST_EXIST);
+        if ($SITE->id == $COURSE->id) {
+            $COURSE = $SITE;
+        }
+        format_base::reset_course_cache($SITE->id);
+
+        return '';
+
     }
 }
 
@@ -3302,7 +3385,7 @@ class admin_setting_courselist_frontpage extends admin_setting {
         $name        = 'frontpage'.($loggedin ? 'loggedin' : '');
         $visiblename = get_string('frontpage'.($loggedin ? 'loggedin' : ''),'admin');
         $description = get_string('configfrontpage'.($loggedin ? 'loggedin' : ''),'admin');
-        $defaults    = array(FRONTPAGECOURSELIST);
+        $defaults    = array(FRONTPAGEALLCOURSELIST);
         parent::__construct($name, $visiblename, $description, $defaults);
     }
 
@@ -3312,17 +3395,18 @@ class admin_setting_courselist_frontpage extends admin_setting {
      * @return bool always returns true
      */
     public function load_choices() {
-        global $DB;
         if (is_array($this->choices)) {
             return true;
         }
         $this->choices = array(FRONTPAGENEWS          => get_string('frontpagenews'),
-            FRONTPAGECOURSELIST    => get_string('frontpagecourselist'),
+            FRONTPAGEALLCOURSELIST => get_string('frontpagecourselist'),
+            FRONTPAGEENROLLEDCOURSELIST => get_string('frontpageenrolledcourselist'),
             FRONTPAGECATEGORYNAMES => get_string('frontpagecategorynames'),
             FRONTPAGECATEGORYCOMBO => get_string('frontpagecategorycombo'),
+            FRONTPAGECOURSESEARCH  => get_string('frontpagecoursesearch'),
             'none'                 => get_string('none'));
-        if ($this->name == 'frontpage' and $DB->count_records('course') > FRONTPAGECOURSELIMIT) {
-            unset($this->choices[FRONTPAGECOURSELIST]);
+        if ($this->name === 'frontpage') {
+            unset($this->choices[FRONTPAGEENROLLEDCOURSELIST]);
         }
         return true;
     }
@@ -3424,17 +3508,22 @@ class admin_setting_sitesetcheckbox extends admin_setting_configcheckbox {
      * @return string empty string or error message
      */
     public function write_setting($data) {
-        global $DB, $SITE;
+        global $DB, $SITE, $COURSE;
         $record = new stdClass();
         $record->id            = $SITE->id;
         $record->{$this->name} = ($data == '1' ? 1 : 0);
         $record->timemodified  = time();
-        // update $SITE
-        $SITE->{$this->name} = $data;
+
         course_get_format($SITE)->update_course_format_options($record);
         $DB->update_record('course', $record);
-        // There is something wrong in cache updates somewhere, let's reset everything.
-        format_base::reset_course_cache();
+
+        // Reset caches.
+        $SITE = $DB->get_record('course', array('id'=>$SITE->id), '*', MUST_EXIST);
+        if ($SITE->id == $COURSE->id) {
+            $COURSE = $SITE;
+        }
+        format_base::reset_course_cache($SITE->id);
+
         return '';
     }
 }
@@ -3481,7 +3570,7 @@ class admin_setting_sitesettext extends admin_setting_configtext {
      * @return string empty or error message
      */
     public function write_setting($data) {
-        global $DB, $SITE;
+        global $DB, $SITE, $COURSE;
         $data = trim($data);
         $validated = $this->validate($data);
         if ($validated !== true) {
@@ -3492,12 +3581,17 @@ class admin_setting_sitesettext extends admin_setting_configtext {
         $record->id            = $SITE->id;
         $record->{$this->name} = $data;
         $record->timemodified  = time();
-        // update $SITE
-        $SITE->{$this->name} = $data;
+
         course_get_format($SITE)->update_course_format_options($record);
         $DB->update_record('course', $record);
-        // There is something wrong in cache updates somewhere, let's reset everything.
-        format_base::reset_course_cache();
+
+        // Reset caches.
+        $SITE = $DB->get_record('course', array('id'=>$SITE->id), '*', MUST_EXIST);
+        if ($SITE->id == $COURSE->id) {
+            $COURSE = $SITE;
+        }
+        format_base::reset_course_cache($SITE->id);
+
         return '';
     }
 }
@@ -3533,16 +3627,22 @@ class admin_setting_special_frontpagedesc extends admin_setting {
      * @return string empty or error message
      */
     public function write_setting($data) {
-        global $DB, $SITE;
+        global $DB, $SITE, $COURSE;
         $record = new stdClass();
         $record->id            = $SITE->id;
         $record->{$this->name} = $data;
         $record->timemodified  = time();
-        $SITE->{$this->name} = $data;
+
         course_get_format($SITE)->update_course_format_options($record);
         $DB->update_record('course', $record);
-        // There is something wrong in cache updates somewhere, let's reset everything.
-        format_base::reset_course_cache();
+
+        // Reset caches.
+        $SITE = $DB->get_record('course', array('id'=>$SITE->id), '*', MUST_EXIST);
+        if ($SITE->id == $COURSE->id) {
+            $COURSE = $SITE;
+        }
+        format_base::reset_course_cache($SITE->id);
+
         return '';
     }
 
@@ -4067,7 +4167,7 @@ class admin_setting_question_behaviour extends admin_setting_configselect {
     public function load_choices() {
         global $CFG;
         require_once($CFG->dirroot . '/question/engine/lib.php');
-        $this->choices = question_engine::get_archetypal_behaviours();
+        $this->choices = question_engine::get_behaviour_options('');
         return true;
     }
 }
@@ -6027,8 +6127,7 @@ class admin_setting_manageformats extends admin_setting {
         if (parent::is_related($query)) {
             return true;
         }
-        $allplugins = plugin_manager::instance()->get_plugins();
-        $formats = $allplugins['format'];
+        $formats = plugin_manager::instance()->get_plugins_of_type('format');
         foreach ($formats as $format) {
             if (strpos($format->component, $query) !== false ||
                     strpos(textlib::strtolower($format->displayname), $query) !== false) {
@@ -6051,8 +6150,7 @@ class admin_setting_manageformats extends admin_setting {
         $return = $OUTPUT->heading(new lang_string('courseformats'), 3, 'main');
         $return .= $OUTPUT->box_start('generalbox formatsui');
 
-        $allplugins = plugin_manager::instance()->get_plugins();
-        $formats = $allplugins['format'];
+        $formats = plugin_manager::instance()->get_plugins_of_type('format');
 
         // display strings
         $txt = get_strings(array('settings', 'name', 'enable', 'disable', 'up', 'down', 'default', 'delete'));
@@ -6385,7 +6483,8 @@ function admin_write_settings($formdata) {
 
     $count = 0;
     foreach ($settings as $fullname=>$setting) {
-        $original = serialize($setting->get_setting()); // comparison must work for arrays too
+        /** @var $setting admin_setting */
+        $original = $setting->get_setting();
         $error = $setting->write_setting($data[$fullname]);
         if ($error !== '') {
             $adminroot->errors[$fullname] = new stdClass();
@@ -6393,12 +6492,8 @@ function admin_write_settings($formdata) {
             $adminroot->errors[$fullname]->id    = $setting->get_id();
             $adminroot->errors[$fullname]->error = $error;
         }
-        if ($original !== serialize($setting->get_setting())) {
+        if ($setting->post_write_settings($original)) {
             $count++;
-            $callbackfunction = $setting->updatedcallback;
-            if (function_exists($callbackfunction)) {
-                $callbackfunction($fullname);
-            }
         }
     }
 
@@ -6668,7 +6763,7 @@ function db_replace($search, $replace) {
     global $DB, $CFG, $OUTPUT;
 
     // TODO: this is horrible hack, we should do whitelisting and each plugin should be responsible for proper replacing...
-    $skiptables = array('config', 'config_plugins', 'config_log', 'upgrade_log',
+    $skiptables = array('config', 'config_plugins', 'config_log', 'upgrade_log', 'log',
                         'filter_config', 'sessions', 'events_queue', 'repository_instance_config',
                         'block_instances', '');
 
@@ -6858,13 +6953,13 @@ class admin_setting_managerepository extends admin_setting {
         $table->data = array();
 
         // Get list of used plug-ins
-        $instances = repository::get_types();
-        if (!empty($instances)) {
+        $repositorytypes = repository::get_types();
+        if (!empty($repositorytypes)) {
             // Array to store plugins being used
             $alreadyplugins = array();
-            $totalinstances = count($instances);
+            $totalrepositorytypes = count($repositorytypes);
             $updowncount = 1;
-            foreach ($instances as $i) {
+            foreach ($repositorytypes as $i) {
                 $settings = '';
                 $typename = $i->get_typename();
                 // Display edit link only if you can config the type or if it has multiple instances (e.g. has instance config)
@@ -6887,9 +6982,10 @@ class admin_setting_managerepository extends admin_setting {
                         $userinstances = array();
 
                         foreach ($instances as $instance) {
-                            if ($instance->context->contextlevel == CONTEXT_COURSE) {
+                            $repocontext = context::instance_by_id($instance->instance->contextid);
+                            if ($repocontext->contextlevel == CONTEXT_COURSE) {
                                 $courseinstances[] = $instance;
-                            } else if ($instance->context->contextlevel == CONTEXT_USER) {
+                            } else if ($repocontext->contextlevel == CONTEXT_USER) {
                                 $userinstances[] = $instance;
                             }
                         }
@@ -6938,7 +7034,7 @@ class admin_setting_managerepository extends admin_setting {
                 else {
                     $updown .= $spacer;
                 }
-                if ($updowncount < $totalinstances) {
+                if ($updowncount < $totalrepositorytypes) {
                     $updown .= "<a href=\"$this->baseurl&amp;action=movedown&amp;repos=".$typename."\">";
                     $updown .= "<img src=\"" . $OUTPUT->pix_url('t/down') . "\" alt=\"down\" class=\"iconsmall\" /></a>";
                 }
@@ -7887,7 +7983,7 @@ class admin_setting_managewebservicetokens extends admin_setting {
 
                 $validuntil = '';
                 if (!empty($token->validuntil)) {
-                    $validuntil = date("F j, Y"); //TODO: language support (look for moodle function)
+                    $validuntil = userdate($token->validuntil, get_string('strftimedatetime', 'langconfig'));
                 }
 
                 $iprestriction = '';
@@ -8079,6 +8175,185 @@ class admin_setting_configcolourpicker extends admin_setting {
         return format_admin_setting($this, $this->visiblename, $content, $this->description, false, '', $this->get_defaultsetting(), $query);
     }
 }
+
+
+/**
+ * Class used for uploading of one file into file storage,
+ * the file name is stored in config table.
+ *
+ * Please note you need to implement your own '_pluginfile' callback function,
+ * this setting only stores the file, it does not deal with file serving.
+ *
+ * @copyright 2013 Petr Skoda {@link http://skodak.org}
+ * @license http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+class admin_setting_configstoredfile extends admin_setting {
+    /** @var array file area options - should be one file only */
+    protected $options;
+    /** @var string name of the file area */
+    protected $filearea;
+    /** @var int intemid */
+    protected $itemid;
+    /** @var string used for detection of changes */
+    protected $oldhashes;
+
+    /**
+     * Create new stored file setting.
+     *
+     * @param string $name low level setting name
+     * @param string $visiblename human readable setting name
+     * @param string $description description of setting
+     * @param mixed $filearea file area for file storage
+     * @param int $itemid itemid for file storage
+     * @param array $options file area options
+     */
+    public function __construct($name, $visiblename, $description, $filearea, $itemid = 0, array $options = null) {
+        parent::__construct($name, $visiblename, $description, '');
+        $this->filearea = $filearea;
+        $this->itemid   = $itemid;
+        $this->options  = (array)$options;
+    }
+
+    /**
+     * Applies defaults and returns all options.
+     * @return array
+     */
+    protected function get_options() {
+        global $CFG;
+
+        require_once("$CFG->libdir/filelib.php");
+        require_once("$CFG->dirroot/repository/lib.php");
+        $defaults = array(
+            'mainfile' => '', 'subdirs' => 0, 'maxbytes' => -1, 'maxfiles' => 1,
+            'accepted_types' => '*', 'return_types' => FILE_INTERNAL, 'areamaxbytes' => FILE_AREA_MAX_BYTES_UNLIMITED,
+            'context' => context_system::instance());
+        foreach($this->options as $k => $v) {
+            $defaults[$k] = $v;
+        }
+
+        return $defaults;
+    }
+
+    public function get_setting() {
+        return $this->config_read($this->name);
+    }
+
+    public function write_setting($data) {
+        global $USER;
+
+        // Let's not deal with validation here, this is for admins only.
+        $current = $this->get_setting();
+        if (empty($data)) {
+            // Most probably applying default settings.
+            if ($current === null) {
+                return ($this->config_write($this->name, '') ? '' : get_string('errorsetting', 'admin'));
+            }
+            return '';
+        } else if (!is_number($data)) {
+            // Draft item id is expected here!
+            return get_string('errorsetting', 'admin');
+        }
+
+        $options = $this->get_options();
+        $fs = get_file_storage();
+        $component = is_null($this->plugin) ? 'core' : $this->plugin;
+
+        $this->oldhashes = null;
+        if ($current) {
+            $hash = sha1('/'.$options['context']->id.'/'.$component.'/'.$this->filearea.'/'.$this->itemid.$current);
+            if ($file = $fs->get_file_by_hash($hash)) {
+                $this->oldhashes = $file->get_contenthash().$file->get_pathnamehash();
+            }
+            unset($file);
+        }
+
+        if ($fs->file_exists($options['context']->id, $component, $this->filearea, $this->itemid, '/', '.')) {
+            // Make sure the settings form was not open for more than 4 days and draft areas deleted in the meantime.
+            $usercontext = context_user::instance($USER->id);
+            if (!$fs->file_exists($usercontext->id, 'user', 'draft', $data, '/', '.')) {
+                return get_string('errorsetting', 'admin');
+            }
+        }
+
+        file_save_draft_area_files($data, $options['context']->id, $component, $this->filearea, $this->itemid, $options);
+        $files = $fs->get_area_files($options['context']->id, $component, $this->filearea, $this->itemid, 'sortorder,filepath,filename', false);
+
+        $filepath = '';
+        if ($files) {
+            /** @var stored_file $file */
+            $file = reset($files);
+            $filepath = $file->get_filepath().$file->get_filename();
+        }
+
+        return ($this->config_write($this->name, $filepath) ? '' : get_string('errorsetting', 'admin'));
+    }
+
+    public function post_write_settings($original) {
+        $options = $this->get_options();
+        $fs = get_file_storage();
+        $component = is_null($this->plugin) ? 'core' : $this->plugin;
+
+        $current = $this->get_setting();
+        $newhashes = null;
+        if ($current) {
+            $hash = sha1('/'.$options['context']->id.'/'.$component.'/'.$this->filearea.'/'.$this->itemid.$current);
+            if ($file = $fs->get_file_by_hash($hash)) {
+                $newhashes = $file->get_contenthash().$file->get_pathnamehash();
+            }
+            unset($file);
+        }
+
+        if ($this->oldhashes === $newhashes) {
+            $this->oldhashes = null;
+            return false;
+        }
+        $this->oldhashes = null;
+
+        $callbackfunction = $this->updatedcallback;
+        if (!empty($callbackfunction) and function_exists($callbackfunction)) {
+            $callbackfunction($this->get_full_name());
+        }
+        return true;
+    }
+
+    public function output_html($data, $query = '') {
+        global $PAGE, $CFG;
+
+        $options = $this->get_options();
+        $id = $this->get_id();
+        $elname = $this->get_full_name();
+        $draftitemid = file_get_submitted_draft_itemid($elname);
+        $component = is_null($this->plugin) ? 'core' : $this->plugin;
+        file_prepare_draft_area($draftitemid, $options['context']->id, $component, $this->filearea, $this->itemid, $options);
+
+        // Filemanager form element implementation is far from optimal, we need to rework this if we ever fix it...
+        require_once("$CFG->dirroot/lib/form/filemanager.php");
+
+        $fmoptions = new stdClass();
+        $fmoptions->mainfile       = $options['mainfile'];
+        $fmoptions->maxbytes       = $options['maxbytes'];
+        $fmoptions->maxfiles       = $options['maxfiles'];
+        $fmoptions->client_id      = uniqid();
+        $fmoptions->itemid         = $draftitemid;
+        $fmoptions->subdirs        = $options['subdirs'];
+        $fmoptions->target         = $id;
+        $fmoptions->accepted_types = $options['accepted_types'];
+        $fmoptions->return_types   = $options['return_types'];
+        $fmoptions->context        = $options['context'];
+        $fmoptions->areamaxbytes   = $options['areamaxbytes'];
+
+        $fm = new form_filemanager($fmoptions);
+        $output = $PAGE->get_renderer('core', 'files');
+        $html = $output->render($fm);
+
+        $html .= '<input value="'.$draftitemid.'" name="'.$elname.'" type="hidden" />';
+        $html .= '<input value="" id="'.$id.'" type="hidden" />';
+
+        return format_admin_setting($this, $this->visiblename,
+            '<div class="form-filemanager">'.$html.'</div>', $this->description, true, '', '', $query);
+    }
+}
+
 
 /**
  * Administration interface for user specified regular expressions for device detection.

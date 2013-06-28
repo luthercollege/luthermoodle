@@ -497,6 +497,7 @@ if ($formdata = $mform2->is_cancelled()) {
 
             $upt->track('username', html_writer::link(new moodle_url('/user/profile.php', array('id'=>$existinguser->id)), s($existinguser->username)), 'normal', false);
             $upt->track('suspended', $stryesnooptions[$existinguser->suspended] , 'normal', false);
+            $upt->track('auth', $existinguser->auth, 'normal', false);
 
             if (is_siteadmin($user->id)) {
                 $upt->track('status', $strusernotupdatedadmin, 'error');
@@ -509,8 +510,6 @@ if ($formdata = $mform2->is_cancelled()) {
 
             //load existing profile data
             profile_load_data($existinguser);
-
-            $upt->track('auth', $existinguser->auth, 'normal', false);
 
             $doupdate = false;
             $dologout = false;
@@ -535,6 +534,7 @@ if ($formdata = $mform2->is_cancelled()) {
                     }
                     if (!property_exists($user, $column) or !property_exists($existinguser, $column)) {
                         // this should never happen
+                        debugging("Could not find $column on the user objects", DEBUG_DEVELOPER);
                         continue;
                     }
                     if ($updatetype == UU_UPDATE_MISSING) {
@@ -618,7 +618,7 @@ if ($formdata = $mform2->is_cancelled()) {
                 // Do not mess with passwords of remote users.
 
             } else if (!$isinternalauth) {
-                $existinguser->password = 'not cached';
+                $existinguser->password = AUTH_PASSWORD_NOT_CACHED;
                 $upt->track('password', '-', 'normal', false);
                 // clean up prefs
                 unset_user_preference('create_password', $existinguser);
@@ -626,6 +626,8 @@ if ($formdata = $mform2->is_cancelled()) {
 
             } else if (!empty($user->password)) {
                 if ($updatepasswords) {
+                    // Check for passwords that we want to force users to reset next
+                    // time they log in.
                     $errmsg = null;
                     $weak = !check_password_policy($user->password, $errmsg);
                     if ($resetpasswords == UU_PWRESET_ALL or ($resetpasswords == UU_PWRESET_WEAK and $weak)) {
@@ -638,7 +640,12 @@ if ($formdata = $mform2->is_cancelled()) {
                         unset_user_preference('auth_forcepasswordchange', $existinguser);
                     }
                     unset_user_preference('create_password', $existinguser); // no need to create password any more
-                    $existinguser->password = hash_internal_user_password($user->password);
+
+                    // Use a low cost factor when generating bcrypt hash otherwise
+                    // hashing would be slow when uploading lots of users. Hashes
+                    // will be automatically updated to a higher cost factor the first
+                    // time the user logs in.
+                    $existinguser->password = hash_internal_user_password($user->password, true);
                     $upt->track('password', $user->password, 'normal', false);
                 } else {
                     // do not print password when not changed
@@ -771,10 +778,14 @@ if ($formdata = $mform2->is_cancelled()) {
                         }
                         $forcechangepassword = true;
                     }
-                    $user->password = hash_internal_user_password($user->password);
+                    // Use a low cost factor when generating bcrypt hash otherwise
+                    // hashing would be slow when uploading lots of users. Hashes
+                    // will be automatically updated to a higher cost factor the first
+                    // time the user logs in.
+                    $user->password = hash_internal_user_password($user->password, true);
                 }
             } else {
-                $user->password = 'not cached';
+                $user->password = AUTH_PASSWORD_NOT_CACHED;
                 $upt->track('password', '-', 'normal', false);
             }
 
@@ -888,7 +899,28 @@ if ($formdata = $mform2->is_cancelled()) {
                 }
             }
 
-            if ($manual and $manualcache[$courseid]) {
+            if ($courseid == SITEID) {
+                // Technically frontpage does not have enrolments, but only role assignments,
+                // let's not invent new lang strings here for this rarely used feature.
+
+                if (!empty($user->{'role'.$i})) {
+                    $addrole = $user->{'role'.$i};
+                    if (array_key_exists($addrole, $rolecache)) {
+                        $rid = $rolecache[$addrole]->id;
+                    } else {
+                        $upt->track('enrolments', get_string('unknownrole', 'error', s($addrole)), 'error');
+                        continue;
+                    }
+
+                    role_assign($rid, $user->id, context_course::instance($courseid));
+
+                    $a = new stdClass();
+                    $a->course = $shortname;
+                    $a->role   = $rolecache[$rid]->name;
+                    $upt->track('enrolments', get_string('enrolledincourserole', 'enrol_manual', $a));
+                }
+
+            } else if ($manual and $manualcache[$courseid]) {
 
                 // find role
                 $rid = false;

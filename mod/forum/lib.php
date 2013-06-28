@@ -45,6 +45,10 @@ define('FORUM_TRACKING_OFF', 0);
 define('FORUM_TRACKING_OPTIONAL', 1);
 define('FORUM_TRACKING_ON', 2);
 
+define('FORUM_MAILED_PENDING', 0);
+define('FORUM_MAILED_SUCCESS', 1);
+define('FORUM_MAILED_ERROR', 2);
+
 if (!defined('FORUM_CRON_USER_CACHE')) {
     /** Defines how many full user records are cached in forum cron. */
     define('FORUM_CRON_USER_CACHE', 5000);
@@ -207,6 +211,14 @@ function forum_update_instance($forum, $mform) {
     }
 
     $DB->update_record('forum', $forum);
+
+    $modcontext = context_module::instance($forum->coursemodule);
+    if (($forum->forcesubscribe == FORUM_INITIALSUBSCRIBE) && ($oldforum->forcesubscribe <> $forum->forcesubscribe)) {
+        $users = forum_get_potential_subscribers($modcontext, 0, 'u.id, u.email', '');
+        foreach ($users as $user) {
+            forum_subscribe($user->id, $forum->id);
+        }
+    }
 
     forum_grade_item_update($forum);
 
@@ -752,7 +764,7 @@ function forum_cron() {
         foreach ($posts as $post) {
             mtrace($mailcount[$post->id]." users were sent post $post->id, '$post->subject'");
             if ($errorcount[$post->id]) {
-                $DB->set_field("forum_posts", "mailed", "2", array("id" => "$post->id"));
+                $DB->set_field('forum_posts', 'mailed', FORUM_MAILED_ERROR, array('id' => $post->id));
             }
         }
     }
@@ -2135,26 +2147,31 @@ function forum_get_ratings($context, $postid, $sort = "u.firstname ASC") {
 function forum_get_unmailed_posts($starttime, $endtime, $now=null) {
     global $CFG, $DB;
 
-    $params = array($starttime, $endtime);
+    $params = array();
+    $params['mailed'] = FORUM_MAILED_PENDING;
+    $params['ptimestart'] = $starttime;
+    $params['ptimeend'] = $endtime;
+    $params['mailnow'] = 1;
+
     if (!empty($CFG->forum_enabletimedposts)) {
         if (empty($now)) {
             $now = time();
         }
-        $timedsql = "AND (d.timestart < ? AND (d.timeend = 0 OR d.timeend > ?))";
-        $params[] = $now;
-        $params[] = $now;
+        $timedsql = "AND (d.timestart < :dtimestart AND (d.timeend = 0 OR d.timeend > :dtimeend))";
+        $params['dtimestart'] = $now;
+        $params['dtimeend'] = $now;
     } else {
         $timedsql = "";
     }
 
     return $DB->get_records_sql("SELECT p.*, d.course, d.forum
-                              FROM {forum_posts} p
-                                   JOIN {forum_discussions} d ON d.id = p.discussion
-                             WHERE p.mailed = 0
-                                   AND p.created >= ?
-                                   AND (p.created < ? OR p.mailnow = 1)
-                                   $timedsql
-                          ORDER BY p.modified ASC", $params);
+                                 FROM {forum_posts} p
+                                 JOIN {forum_discussions} d ON d.id = p.discussion
+                                 WHERE p.mailed = :mailed
+                                 AND p.created >= :ptimestart
+                                 AND (p.created < :ptimeend OR p.mailnow = :mailnow)
+                                 $timedsql
+                                 ORDER BY p.modified ASC", $params);
 }
 
 /**
@@ -2168,24 +2185,31 @@ function forum_get_unmailed_posts($starttime, $endtime, $now=null) {
  */
 function forum_mark_old_posts_as_mailed($endtime, $now=null) {
     global $CFG, $DB;
+
     if (empty($now)) {
         $now = time();
     }
 
+    $params = array();
+    $params['mailedsuccess'] = FORUM_MAILED_SUCCESS;
+    $params['now'] = $now;
+    $params['endtime'] = $endtime;
+    $params['mailnow'] = 1;
+    $params['mailedpending'] = FORUM_MAILED_PENDING;
+
     if (empty($CFG->forum_enabletimedposts)) {
         return $DB->execute("UPDATE {forum_posts}
-                               SET mailed = '1'
-                             WHERE (created < ? OR mailnow = 1)
-                                   AND mailed = 0", array($endtime));
-
+                             SET mailed = :mailedsuccess
+                             WHERE (created < :endtime OR mailnow = :mailnow)
+                             AND mailed = :mailedpending", $params);
     } else {
         return $DB->execute("UPDATE {forum_posts}
-                               SET mailed = '1'
+                             SET mailed = :mailedsuccess
                              WHERE discussion NOT IN (SELECT d.id
-                                                        FROM {forum_discussions} d
-                                                       WHERE d.timestart > ?)
-                                   AND (created < ? OR mailnow = 1)
-                                   AND mailed = 0", array($now, $endtime));
+                                                      FROM {forum_discussions} d
+                                                      WHERE d.timestart > :now)
+                             AND (created < :endtime OR mailnow = :mailnow)
+                             AND mailed = :mailedpending", $params);
     }
 }
 
@@ -3451,7 +3475,8 @@ function forum_print_post($post, $discussion, $forum, &$cm, $course, $ownpost=fa
         $postclass    = 'shortenedpost';
         $postcontent  = format_text(forum_shorten_post($post->message), $post->messageformat, $options, $course->id);
         $postcontent .= html_writer::link($discussionlink, get_string('readtherest', 'forum'));
-        $postcontent .= html_writer::tag('span', '('.get_string('numwords', 'moodle', count_words(strip_tags($post->message))).')...', array('class'=>'post-word-count'));
+        $postcontent .= html_writer::tag('div', '('.get_string('numwords', 'moodle', count_words($post->message)).')',
+            array('class'=>'post-word-count'));
     } else {
         // Prepare whole post
         $postclass    = 'fullpost';
@@ -3459,8 +3484,13 @@ function forum_print_post($post, $discussion, $forum, &$cm, $course, $ownpost=fa
         if (!empty($highlight)) {
             $postcontent = highlight($highlight, $postcontent);
         }
+        if (!empty($forum->displaywordcount)) {
+            $postcontent .= html_writer::tag('div', get_string('numwords', 'moodle', count_words($post->message)),
+                array('class'=>'post-word-count'));
+        }
         $postcontent .= html_writer::tag('div', $attachedimages, array('class'=>'attachedimages'));
     }
+
     // Output the post content
     $output .= html_writer::tag('div', $postcontent, array('class'=>'posting '.$postclass));
     $output .= html_writer::end_tag('div'); // Content
@@ -3707,7 +3737,7 @@ function forum_print_discussion_header(&$post, $forum, $group=-1, $datestring=""
     echo "</td>\n";
 
     // User name
-    $fullname = fullname($post, has_capability('moodle/site:viewfullnames', $modcontext));
+    $fullname = fullname($postuser, has_capability('moodle/site:viewfullnames', $modcontext));
     echo '<td class="author">';
     echo '<a href="'.$CFG->wwwroot.'/user/view.php?id='.$post->userid.'&amp;course='.$forum->course.'">'.$fullname.'</a>';
     echo "</td>\n";
@@ -4312,7 +4342,7 @@ function forum_add_new_post($post, $mform, &$message) {
     $context    = context_module::instance($cm->id);
 
     $post->created    = $post->modified = time();
-    $post->mailed     = "0";
+    $post->mailed     = FORUM_MAILED_PENDING;
     $post->userid     = $USER->id;
     $post->attachment = "";
 
@@ -4416,7 +4446,7 @@ function forum_add_discussion($discussion, $mform=null, $unused=null, $userid=nu
     $post->userid        = $userid;
     $post->created       = $timenow;
     $post->modified      = $timenow;
-    $post->mailed        = 0;
+    $post->mailed        = FORUM_MAILED_PENDING;
     $post->subject       = $discussion->name;
     $post->message       = $discussion->message;
     $post->messageformat = $discussion->messageformat;
@@ -6730,7 +6760,11 @@ function forum_tp_count_forum_unread_posts($cm, $course) {
         $modinfo->groups = groups_get_user_groups($course->id, $USER->id);
     }
 
-    $mygroups = $modinfo->groups[$cm->groupingid];
+    if (array_key_exists($cm->groupingid, $modinfo->groups)) {
+        $mygroups = $modinfo->groups[$cm->groupingid];
+    } else {
+        $mygroups = false; // Will be set below
+    }
 
     // add all groups posts
     if (empty($mygroups)) {
@@ -7052,50 +7086,49 @@ function forum_get_post_actions() {
 }
 
 /**
- * @global object
- * @global object
- * @global object
- * @param object $forum
- * @param object $cm
- * @return bool
+ * Returns a warning object if a user has reached the number of posts equal to
+ * the warning/blocking setting, or false if there is no warning to show.
+ *
+ * @param int|stdClass $forum the forum id or the forum object
+ * @param stdClass $cm the course module
+ * @return stdClass|bool returns an object with the warning information, else
+ *         returns false if no warning is required.
  */
-function forum_check_throttling($forum, $cm=null) {
-    global $USER, $CFG, $DB, $OUTPUT;
+function forum_check_throttling($forum, $cm = null) {
+    global $CFG, $DB, $USER;
 
     if (is_numeric($forum)) {
-        $forum = $DB->get_record('forum',array('id'=>$forum));
+        $forum = $DB->get_record('forum', array('id' => $forum), '*', MUST_EXIST);
     }
+
     if (!is_object($forum)) {
-        return false;  // this is broken.
-    }
-
-    if (empty($forum->blockafter)) {
-        return true;
-    }
-
-    if (empty($forum->blockperiod)) {
-        return true;
+        return false; // This is broken.
     }
 
     if (!$cm) {
-        if (!$cm = get_coursemodule_from_instance('forum', $forum->id, $forum->course)) {
-            print_error('invalidcoursemodule');
-        }
+        $cm = get_coursemodule_from_instance('forum', $forum->id, $forum->course, false, MUST_EXIST);
+    }
+
+    if (empty($forum->blockafter)) {
+        return false;
+    }
+
+    if (empty($forum->blockperiod)) {
+        return false;
     }
 
     $modcontext = context_module::instance($cm->id);
-    if(has_capability('mod/forum:postwithoutthrottling', $modcontext)) {
-        return true;
+    if (has_capability('mod/forum:postwithoutthrottling', $modcontext)) {
+        return false;
     }
 
-    // get the number of posts in the last period we care about
+    // Get the number of posts in the last period we care about.
     $timenow = time();
     $timeafter = $timenow - $forum->blockperiod;
-
-    $numposts = $DB->count_records_sql('SELECT COUNT(p.id) FROM {forum_posts} p'
-                                      .' JOIN {forum_discussions} d'
-                                      .' ON p.discussion = d.id WHERE d.forum = ?'
-                                      .' AND p.userid = ? AND p.created > ?', array($forum->id, $USER->id, $timeafter));
+    $numposts = $DB->count_records_sql('SELECT COUNT(p.id) FROM {forum_posts} p
+                                        JOIN {forum_discussions} d
+                                        ON p.discussion = d.id WHERE d.forum = ?
+                                        AND p.userid = ? AND p.created > ?', array($forum->id, $USER->id, $timeafter));
 
     $a = new stdClass();
     $a->blockafter = $forum->blockafter;
@@ -7103,13 +7136,44 @@ function forum_check_throttling($forum, $cm=null) {
     $a->blockperiod = get_string('secondstotime'.$forum->blockperiod);
 
     if ($forum->blockafter <= $numposts) {
-        print_error('forumblockingtoomanyposts', 'error', $CFG->wwwroot.'/mod/forum/view.php?f='.$forum->id, $a);
+        $warning = new stdClass();
+        $warning->canpost = false;
+        $warning->errorcode = 'forumblockingtoomanyposts';
+        $warning->module = 'error';
+        $warning->additional = $a;
+        $warning->link = $CFG->wwwroot . '/mod/forum/view.php?f=' . $forum->id;
+
+        return $warning;
     }
+
     if ($forum->warnafter <= $numposts) {
-        echo $OUTPUT->notification(get_string('forumblockingalmosttoomanyposts','forum',$a));
+        $warning = new stdClass();
+        $warning->canpost = true;
+        $warning->errorcode = 'forumblockingalmosttoomanyposts';
+        $warning->module = 'forum';
+        $warning->additional = $a;
+        $warning->link = null;
+
+        return $warning;
     }
+}
 
-
+/**
+ * Throws an error if the user is no longer allowed to post due to having reached
+ * or exceeded the number of posts specified in 'Post threshold for blocking'
+ * setting.
+ *
+ * @since Moodle 2.5
+ * @param stdClass $thresholdwarning the warning information returned
+ *        from the function forum_check_throttling.
+ */
+function forum_check_blocking_threshold($thresholdwarning) {
+    if (!empty($thresholdwarning) && !$thresholdwarning->canpost) {
+        print_error($thresholdwarning->errorcode,
+                    $thresholdwarning->module,
+                    $thresholdwarning->link,
+                    $thresholdwarning->additional);
+    }
 }
 
 
@@ -7864,8 +7928,6 @@ abstract class forum_subscriber_selector_base extends user_selector_base {
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class forum_potential_subscriber_selector extends forum_subscriber_selector_base {
-    const MAX_USERS_PER_PAGE = 100;
-
     /**
      * If set to true EVERYONE in this course is force subscribed to this forum
      * @var bool
@@ -7953,7 +8015,7 @@ class forum_potential_subscriber_selector extends forum_subscriber_selector_base
         // Check to see if there are too many to show sensibly.
         if (!$this->is_validating()) {
             $potentialmemberscount = $DB->count_records_sql($countfields . $sql, $params);
-            if ($potentialmemberscount > self::MAX_USERS_PER_PAGE) {
+            if ($potentialmemberscount > $this->maxusersperpage) {
                 return $this->too_many_results($search, $potentialmemberscount);
             }
         }

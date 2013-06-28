@@ -41,16 +41,17 @@ require_once($CFG->dirroot . '/question/engine/tests/helpers.php');
 class qformat_blackboard_six_qti_test extends question_testcase {
 
     public function make_test_xml() {
-        $xml = file_get_contents(__DIR__ . '/fixtures/sample_blackboard_qti.dat');
-        return array(0=>$xml);
+        $xmlfile = new qformat_blackboard_six_file();
+        $xmlfile->filetype = 1;
+        $xmlfile->text = file_get_contents(__DIR__ . '/fixtures/sample_blackboard_qti.dat');
+        return array(0=>$xmlfile);
     }
     public function test_import_match() {
         $xml = $this->make_test_xml();
 
         $importer = new qformat_blackboard_six();
-        $importer->set_filetype(1);
         $questions = $importer->readquestions($xml);
-        $q = $questions[3];
+        $q = $questions[4];
 
         $expectedq = new stdClass();
         $expectedq->qtype = 'match';
@@ -83,9 +84,8 @@ class qformat_blackboard_six_qti_test extends question_testcase {
         $xml = $this->make_test_xml();
 
         $importer = new qformat_blackboard_six();
-        $importer->set_filetype(1);
         $questions = $importer->readquestions($xml);
-        $q = $questions[1];
+        $q = $questions[2];
 
         $expectedq = new stdClass();
         $expectedq->qtype = 'multichoice';
@@ -143,9 +143,8 @@ class qformat_blackboard_six_qti_test extends question_testcase {
         $xml = $this->make_test_xml();
 
         $importer = new qformat_blackboard_six();
-        $importer->set_filetype(1);
         $questions = $importer->readquestions($xml);
-        $q = $questions[2];
+        $q = $questions[3];
 
         $expectedq = new stdClass();
         $expectedq->qtype = 'multichoice';
@@ -220,9 +219,8 @@ class qformat_blackboard_six_qti_test extends question_testcase {
         $xml = $this->make_test_xml();
 
         $importer = new qformat_blackboard_six();
-        $importer->set_filetype(1);
         $questions = $importer->readquestions($xml);
-        $q = $questions[0];
+        $q = $questions[1];
 
         $expectedq = new stdClass();
         $expectedq->qtype = 'truefalse';
@@ -251,9 +249,8 @@ class qformat_blackboard_six_qti_test extends question_testcase {
         $xml = $this->make_test_xml();
 
         $importer = new qformat_blackboard_six();
-        $importer->set_filetype(1);
         $questions = $importer->readquestions($xml);
-        $q = $questions[4];
+        $q = $questions[5];
 
         $expectedq = new stdClass();
         $expectedq->qtype = 'shortanswer';
@@ -286,9 +283,8 @@ class qformat_blackboard_six_qti_test extends question_testcase {
         $xml = $this->make_test_xml();
 
         $importer = new qformat_blackboard_six();
-        $importer->set_filetype(1);
         $questions = $importer->readquestions($xml);
-        $q = $questions[5];
+        $q = $questions[6];
 
         $expectedq = new stdClass();
         $expectedq->qtype = 'essay';
@@ -306,6 +302,21 @@ class qformat_blackboard_six_qti_test extends question_testcase {
                 'text' => 'Blackboard answer for essay questions will be imported as informations for graders.',
                 'format' => FORMAT_HTML,
             );
+
+        $this->assert(new question_check_specified_fields_expectation($expectedq), $q);
+    }
+
+    public function test_import_category() {
+
+        $xml = $this->make_test_xml();
+
+        $importer = new qformat_blackboard_six();
+        $questions = $importer->readquestions($xml);
+        $q = $questions[0];
+
+        $expectedq = new stdClass();
+        $expectedq->qtype = 'category';
+        $expectedq->category = 'sample_blackboard_six';
 
         $this->assert(new question_check_specified_fields_expectation($expectedq), $q);
     }

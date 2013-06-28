@@ -67,20 +67,19 @@
 
 .path-admin .incompatibleblockstable td.c0 {font-weight: bold;}
 
-#page-admin-course-category .addcategory {padding: 10px;}
-#page-admin-course-index .buttons,
-#page-admin-course-category .buttons {margin-bottom: 15px;}
-#page-admin-course-index .editcourse {margin:20px auto;}
-#page-admin-course-index .editcourse th,
-#page-admin-course-index .editcourse td {padding-left:10px;padding-right:10px;}
-#page-admin-course-index .editcourse .count {text-align:right;}
-#page-admin-course-index.dir-rtl .editcourse td[align="left"] {text-align: right;}
-#page-admin-course-index.dir-rtl .editcourse td[align="right"] {text-align: left;}
+#page-admin-course-manage .addcategory {padding: 10px;}
+#page-admin-course-manage .buttons {margin-bottom: 15px;}
+#page-admin-course-manage .editcourse {margin:20px auto;}
+#page-admin-course-manage .editcourse th,
+#page-admin-course-manage .editcourse td {padding-left:10px;padding-right:10px;}
+#page-admin-course-manage .editcourse .count {text-align:right;}
+#page-admin-course-manage.dir-rtl .editcourse td[align="left"] {text-align: right;}
+#page-admin-course-manage.dir-rtl .editcourse td[align="right"] {text-align: left;}
 
 #page-admin-report-security-index .timewarninghidden {display:none;}
-#page-admin-report-security-index .statuswarning {background-color: #f0e000;}
-#page-admin-report-security-index .statusserious {background-color: #f07000;}
-#page-admin-report-security-index .statuscritical {background-color: #f00000;}
+#page-admin-report-security-index .statuswarning, #page-admin-report-performance-index .statuswarning {background-color: #f0e000;}
+#page-admin-report-security-index .statusserious, #page-admin-report-performance-index .statusserious {background-color: #f07000;}
+#page-admin-report-security-index .statuscritical, #page-admin-report-performance-index .statuscritical {background-color: #f00000;}
 #page-admin-report-capability-index .rolecaps th {text-align: left;}
 #page-admin-report-capability-index #settingsform #capabilitysearch {width: 30em;}
 
@@ -112,8 +111,7 @@
 #page-admin-qtypes #qtypes img { padding-right: .45em; vertical-align: text-bottom; }
 
 .path-admin-roles .buttons .singlebutton,
-#page-admin-course-index .buttons .singlebutton,
-#page-admin-course-category .buttons .singlebutton {display: inline;padding: 5px;}
+#page-admin-course-manage {display: inline;padding: 5px;}
 
 .path-admin-roles .capabilitysearchui {text-align: left;margin-left: auto;margin-right: auto;}
 #page-admin-roles-define .topfields {margin: 1em 0 2em;}
@@ -153,6 +151,8 @@
 #page-admin-plugins .updateplugin div {margin-bottom:0.5em;}
 #page-admin-index .updateplugin .updatepluginconfirmexternal,
 #page-admin-plugins .updateplugin .updatepluginconfirmexternal {padding:1em;background-color:#ffd3d9;border:1px solid #EEAAAA}
+
+#page-admin-plugins .uninstalldeleteconfirmexternal {margin:1em auto;padding:1em;background-color:#ffd3d9;border:1px solid #EEAAAA}
 
 #page-admin-user-user_bulk #users .fgroup {white-space: nowrap;}
 #page-admin-report-stats-index .graph {text-align: center;margin-bottom: 1em;}
@@ -237,6 +237,7 @@
 #adminsettings .form-item .patherror {margin-left: 0.5em;}
 #adminsettings #admin-emoticons table td input {width: 8em;}
 #adminsettings #admin-emoticons table td.c0 input {width: 4em;}
+#adminsettings .form-overridden {background-color: yellow;}
 
 #adminthemeselector .selectedtheme td.c0 {border:1px solid;border-right-width:0;}
 #adminthemeselector .selectedtheme td.c1 {border:1px solid;border-left-width:0;}
@@ -291,10 +292,12 @@
 #page-admin-plugins #plugins-control-panel {margin-left:auto; margin-right:auto;}
 #page-admin-plugins #plugins-control-panel .pluginname .pluginicon {width:16px;}
 #page-admin-plugins #plugins-control-panel .pluginname .componentname {font-size:0.8em;color:#999;margin-left:26px;}
-#page-admin-plugins #plugins-control-panel .missingfromdisk .pluginname {background-color:#ffd3d9;}
+#page-admin-plugins #plugins-control-panel .statusmsg {background-color:#eee;padding:3px;-webkit-border-radius: 5px;-moz-border-radius: 5px;border-radius: 5px;}
+#page-admin-plugins #plugins-control-panel .status-missing .pluginname {background-color:#ffd3d9;}
+#page-admin-plugins #plugins-control-panel .status-missing .statusmsg {color:#600;}
+#page-admin-plugins #plugins-control-panel .status-new .pluginname {background-color:#e7f1c3;}
+#page-admin-plugins #plugins-control-panel .status-new .statusmsg {color:#060;}
 #page-admin-plugins #plugins-control-panel .disabled .availability {background-color:#eee;}
-#page-admin-plugins #plugins-control-panel .actions a {padding:0 10px;}
-#page-admin-plugins #plugins-control-panel .actions .separator {border-left:1px dotted #999;}
 #page-admin-plugins #plugins-control-panel .extension .source {background-color:#f3f2aa;}
 #page-admin-plugins #plugins-control-panel .msg td {text-align:center;}
 #page-admin-plugins #plugins-control-panel .requiredby {font-size:0.8em;color:#999;}
@@ -307,7 +310,7 @@
 #page-admin-plugins #plugins-overview-filter .filter-item.active {font-weight:bold;}
 #page-admin-plugins #plugins-overview-filter .separator {border-left:1px dotted #999;}
 #page-admin-plugins #plugins-control-panel .displayname img.icon { padding-top:0; padding-bottom: 0; }
-#page-admin-plugins #plugins-control-panel .actions .uninstall {color:#900;}
+#page-admin-plugins #plugins-control-panel .uninstall a {color:#900;}
 #page-admin-plugins #plugins-control-panel .notes .pluginupdateinfo {padding:5px 10px;margin:10px;background-color:#d2ebff;-moz-border-radius: 10px;-webkit-border-radius: 10px;border-radius: 10px;}
 #page-admin-plugins #plugins-control-panel .notes .pluginupdateinfo.maturity50 {background-color:#ffd3d9;}
 #page-admin-plugins #plugins-control-panel .notes .pluginupdateinfo.maturity100,
@@ -331,6 +334,8 @@
 #core-cache-mode-mappings table {margin:0 auto;}
 #core-cache-store-summaries .default-store td {color:#333;font-style: italic;}
 #core-cache-rescan-definitions,
-#core-cache-mode-mappings .edit-link {margin-top:0.5em;text-align:center;}
+#core-cache-mode-mappings .edit-link,
+#core-cache-lock-summary .new-instance {margin-top:0.5em;text-align:center;}
+#core-cache-store-summaries .store-requires-attention {background-color:#ffd3d9;}
 
 .tinymcesubplugins img.icon { padding-top: 0; padding-bottom: 0; }

@@ -137,6 +137,17 @@ class cachestore_static extends static_data_store implements cache_is_key_aware 
     }
 
     /**
+     * Returns false as this store does not support multiple identifiers.
+     * (This optional function is a performance optimisation; it must be
+     * consistent with the value from get_supported_features.)
+     *
+     * @return bool False
+     */
+    public function supports_multiple_identifiers() {
+        return false;
+    }
+
+    /**
      * Returns the supported modes as a combined int.
      *
      * @param array $configuration
@@ -331,8 +342,9 @@ class cachestore_static extends static_data_store implements cache_is_key_aware 
      * @return bool Returns true if the operation was a success, false otherwise.
      */
     public function delete($key) {
+        $result = isset($this->store[$key]);
         unset($this->store[$key]);
-        return true;
+        return $result;
     }
 
     /**
@@ -344,8 +356,10 @@ class cachestore_static extends static_data_store implements cache_is_key_aware 
     public function delete_many(array $keys) {
         $count = 0;
         foreach ($keys as $key) {
+            if (isset($this->store[$key])) {
+                $count++;
+            }
             unset($this->store[$key]);
-            $count++;
         }
         return $count;
     }

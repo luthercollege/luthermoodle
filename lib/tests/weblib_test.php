@@ -70,8 +70,27 @@ class web_testcase extends advanced_testcase {
     }
 
     function test_s() {
-        $this->assertEquals(s("This Breaks \" Strict"), "This Breaks &quot; Strict");
-        $this->assertEquals(s("This Breaks <a>\" Strict</a>"), "This Breaks &lt;a&gt;&quot; Strict&lt;/a&gt;");
+        // Special cases.
+        $this->assertSame('0', s(0));
+        $this->assertSame('0', s('0'));
+        $this->assertSame('0', s(false));
+        $this->assertSame('', s(null));
+
+        // Normal cases.
+        $this->assertEquals('This Breaks &quot; Strict', s('This Breaks " Strict'));
+        $this->assertEquals('This Breaks &lt;a&gt;&quot; Strict&lt;/a&gt;', s('This Breaks <a>" Strict</a>'));
+
+        // Unicode characters.
+        $this->assertEquals('Café', s('Café'));
+        $this->assertEquals('一, 二, 三', s('一, 二, 三'));
+
+        // Don't escape already-escaped numeric entities. (Note, this behaviour
+        // may not be desirable. Perhaps we should remove these tests and that
+        // functionality, but we can only do that if we understand why it was added.)
+        $this->assertEquals('An entity: &#x09ff;.', s('An entity: &#x09ff;.'));
+        $this->assertEquals('An entity: &#1073;.', s('An entity: &#1073;.'));
+        $this->assertEquals('An entity: &amp;amp;.', s('An entity: &amp;.'));
+        $this->assertEquals('Not an entity: &amp;amp;#x09ff;.', s('Not an entity: &amp;#x09ff;.'));
     }
 
     function test_format_text_email() {
@@ -85,6 +104,22 @@ class web_testcase extends advanced_testcase {
             format_text_email('Two bullets: &#x2022; &#8226;',FORMAT_HTML));
         $this->assertEquals(textlib::code2utf8(0x7fd2).textlib::code2utf8(0x7fd2),
             format_text_email('&#x7fd2;&#x7FD2;',FORMAT_HTML));
+    }
+
+    function test_obfuscate_email() {
+        $email = 'some.user@example.com';
+        $obfuscated = obfuscate_email($email);
+        $this->assertNotSame($email, $obfuscated);
+        $back = textlib::entities_to_utf8(urldecode($email), true);
+        $this->assertSame($email, $back);
+    }
+
+    function test_obfuscate_text() {
+        $text = 'Žluťoučký koníček 32131';
+        $obfuscated = obfuscate_text($text);
+        $this->assertNotSame($text, $obfuscated);
+        $back = textlib::entities_to_utf8($obfuscated, true);
+        $this->assertSame($text, $back);
     }
 
     function test_highlight() {
@@ -133,6 +168,31 @@ class web_testcase extends advanced_testcase {
         $this->assertEquals($strurl, $url->out(false));
 
         $strurl = 'http://moodle.org/user/index.php?contextid=53&sifirst=M&silast=D';
+        $url = new moodle_url($strurl);
+        $this->assertEquals($strurl, $url->out(false));
+    }
+
+    /**
+     * Test Moodle URL objects created with a param with empty value.
+     */
+    function test_moodle_url_empty_param_values() {
+        $strurl = 'http://moodle.org/course/view.php?id=0';
+        $url = new moodle_url($strurl, array('id' => 0));
+        $this->assertEquals($strurl, $url->out(false));
+
+        $strurl = 'http://moodle.org/course/view.php?id';
+        $url = new moodle_url($strurl, array('id' => false));
+        $this->assertEquals($strurl, $url->out(false));
+
+        $strurl = 'http://moodle.org/course/view.php?id';
+        $url = new moodle_url($strurl, array('id' => null));
+        $this->assertEquals($strurl, $url->out(false));
+
+        $strurl = 'http://moodle.org/course/view.php?id';
+        $url = new moodle_url($strurl, array('id' => ''));
+        $this->assertEquals($strurl, $url->out(false));
+
+        $strurl = 'http://moodle.org/course/view.php?id';
         $url = new moodle_url($strurl);
         $this->assertEquals($strurl, $url->out(false));
     }

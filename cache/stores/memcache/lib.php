@@ -52,6 +52,12 @@ class cachestore_memcache extends cache_store implements cache_is_configurable {
     protected $connection;
 
     /**
+     * Key prefix for this memcache.
+     * @var string
+     */
+    protected $prefix;
+
+    /**
      * An array of servers to use in the connection args.
      * @var array
      */
@@ -80,6 +86,12 @@ class cachestore_memcache extends cache_store implements cache_is_configurable {
      * @var cache_definition
      */
     protected $definition;
+
+    /**
+     * Default prefix for key names.
+     * @var string
+     */
+    const DEFAULT_PREFIX = 'mdl_';
 
     /**
      * Constructs the store instance.
@@ -111,13 +123,18 @@ class cachestore_memcache extends cache_store implements cache_is_configurable {
             }
             $this->servers[] = $server;
         }
+        if (empty($configuration['prefix'])) {
+            $this->prefix = self::DEFAULT_PREFIX;
+        } else {
+            $this->prefix = $configuration['prefix'];
+        }
 
         $this->connection = new Memcache;
         foreach ($this->servers as $server) {
             $this->connection->addServer($server[0], $server[1], true, $server[2]);
             // Test the connection to this server.
-            $this->isready = @$this->connection->set("ping", 'ping', MEMCACHE_COMPRESSED, 1);
         }
+        $this->isready = @$this->connection->set($this->parse_key('ping'), 'ping', MEMCACHE_COMPRESSED, 1);
     }
 
     /**
@@ -182,6 +199,17 @@ class cachestore_memcache extends cache_store implements cache_is_configurable {
     }
 
     /**
+     * Returns false as this store does not support multiple identifiers.
+     * (This optional function is a performance optimisation; it must be
+     * consistent with the value from get_supported_features.)
+     *
+     * @return bool False
+     */
+    public function supports_multiple_identifiers() {
+        return false;
+    }
+
+    /**
      * Returns the supported modes as a combined int.
      *
      * @param array $configuration
@@ -192,13 +220,27 @@ class cachestore_memcache extends cache_store implements cache_is_configurable {
     }
 
     /**
+     * Parses the given key to make it work for this memcache backend.
+     *
+     * @param string $key The raw key.
+     * @return string The resulting key.
+     */
+    protected function parse_key($key) {
+        if (strlen($key) > 245) {
+            $key = '_sha1_'.sha1($key);
+        }
+        $key = $this->prefix . $key;
+        return $key;
+    }
+
+    /**
      * Retrieves an item from the cache store given its key.
      *
      * @param string $key The key to retrieve
      * @return mixed The data that was associated with the key, or false if the key did not exist.
      */
     public function get($key) {
-        return $this->connection->get($key);
+        return $this->connection->get($this->parse_key($key));
     }
 
     /**
@@ -211,16 +253,23 @@ class cachestore_memcache extends cache_store implements cache_is_configurable {
      *      be set to false.
      */
     public function get_many($keys) {
-        $result = $this->connection->get($keys);
+        $mkeys = array();
+        foreach ($keys as $key) {
+            $mkeys[$key] = $this->parse_key($key);
+        }
+        $result = $this->connection->get($mkeys);
         if (!is_array($result)) {
             $result = array();
         }
-        foreach ($keys as $key) {
-            if (!array_key_exists($key, $result)) {
-                $result[$key] = false;
+        $return = array();
+        foreach ($mkeys as $key => $mkey) {
+            if (!array_key_exists($mkey, $result)) {
+                $return[$key] = false;
+            } else {
+                $return[$key] = $result[$mkey];
             }
         }
-        return $result;
+        return $return;
     }
 
     /**
@@ -231,7 +280,7 @@ class cachestore_memcache extends cache_store implements cache_is_configurable {
      * @return bool True if the operation was a success false otherwise.
      */
     public function set($key, $data) {
-        return $this->connection->set($key, $data, MEMCACHE_COMPRESSED, $this->definition->get_ttl());
+        return $this->connection->set($this->parse_key($key), $data, MEMCACHE_COMPRESSED, $this->definition->get_ttl());
     }
 
     /**
@@ -245,7 +294,7 @@ class cachestore_memcache extends cache_store implements cache_is_configurable {
     public function set_many(array $keyvaluearray) {
         $count = 0;
         foreach ($keyvaluearray as $pair) {
-            if ($this->connection->set($pair['key'], $pair['value'], MEMCACHE_COMPRESSED, $this->definition->get_ttl())) {
+            if ($this->connection->set($this->parse_key($pair['key']), $pair['value'], MEMCACHE_COMPRESSED, $this->definition->get_ttl())) {
                 $count++;
             }
         }
@@ -259,7 +308,7 @@ class cachestore_memcache extends cache_store implements cache_is_configurable {
      * @return bool Returns true if the operation was a success, false otherwise.
      */
     public function delete($key) {
-        return $this->connection->delete($key);
+        return $this->connection->delete($this->parse_key($key));
     }
 
     /**
@@ -306,6 +355,7 @@ class cachestore_memcache extends cache_store implements cache_is_configurable {
         }
         return array(
             'servers' => $servers,
+            'prefix' => $data->prefix,
         );
     }
 
@@ -324,6 +374,12 @@ class cachestore_memcache extends cache_store implements cache_is_configurable {
             }
             $data['servers'] = join("\n", $servers);
         }
+        if (!empty($config['prefix'])) {
+            $data['prefix'] = $config['prefix'];
+        } else {
+            $data['prefix'] = self::DEFAULT_PREFIX;
+        }
+
         $editform->set_data($data);
     }
 

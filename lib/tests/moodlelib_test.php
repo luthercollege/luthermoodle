@@ -85,6 +85,29 @@ class moodlelib_testcase extends advanced_testcase {
         )
     );
 
+    /**
+     * Define a local decimal separator.
+     *
+     * It is not possible to directly change the result of get_string in
+     * a unit test. Instead, we create a language pack for language 'xx' in
+     * dataroot and make langconfig.php with the string we need to change.
+     * The example separator used here is 'X'; on PHP 5.3 and before this
+     * must be a single byte character due to PHP bug/limitation in
+     * number_format, so you can't use UTF-8 characters.
+     *
+     * @global type $SESSION
+     * @global type $CFG
+     */
+    protected function define_local_decimal_separator() {
+        global $SESSION, $CFG;
+
+        $SESSION->lang = 'xx';
+        $langconfig = "<?php\n\$string['decsep'] = 'X';";
+        $langfolder = $CFG->dataroot . '/lang/xx';
+        check_dir_exists($langfolder);
+        file_put_contents($langfolder . '/langconfig.php', $langconfig);
+    }
+
     function test_cleanremoteaddr() {
         //IPv4
         $this->assertEquals(cleanremoteaddr('1023.121.234.1'), null);
@@ -797,6 +820,21 @@ class moodlelib_testcase extends advanced_testcase {
         $this->assertSame(clean_param('user_', PARAM_COMPONENT), '');
     }
 
+    function test_is_valid_plugin_name() {
+        $this->assertTrue(is_valid_plugin_name('forum'));
+        $this->assertTrue(is_valid_plugin_name('forum2'));
+        $this->assertTrue(is_valid_plugin_name('online_users'));
+        $this->assertTrue(is_valid_plugin_name('blond_online_users'));
+        $this->assertFalse(is_valid_plugin_name('online__users'));
+        $this->assertFalse(is_valid_plugin_name('forum '));
+        $this->assertFalse(is_valid_plugin_name('forum.old'));
+        $this->assertFalse(is_valid_plugin_name('xx-yy'));
+        $this->assertFalse(is_valid_plugin_name('2xx'));
+        $this->assertFalse(is_valid_plugin_name('Xx'));
+        $this->assertFalse(is_valid_plugin_name('_xx'));
+        $this->assertFalse(is_valid_plugin_name('xx_'));
+    }
+
     function test_clean_param_plugin() {
         // please note the cleaning of plugin names is very strict, no guessing here
         $this->assertSame(clean_param('forum', PARAM_PLUGIN), 'forum');
@@ -1097,62 +1135,95 @@ class moodlelib_testcase extends advanced_testcase {
         }
     }
 
-    function test_shorten_text() {
+    function test_shorten_text_no_tags_already_short_enough() {
+        // ......12345678901234567890123456.
         $text = "short text already no tags";
         $this->assertEquals($text, shorten_text($text));
+    }
 
+    function test_shorten_text_with_tags_already_short_enough() {
+        // .........123456...7890....12345678.......901234567.
         $text = "<p>short <b>text</b> already</p><p>with tags</p>";
         $this->assertEquals($text, shorten_text($text));
+    }
 
+    function test_shorten_text_no_tags_needs_shortening() {
+        // Default truncation is after 30 chars, but allowing 3 for the final '...'.
+        // ......12345678901234567890123456789023456789012345678901234.
         $text = "long text without any tags blah de blah blah blah what";
         $this->assertEquals('long text without any tags ...', shorten_text($text));
+    }
 
+    function test_shorten_text_with_tags_needs_shortening() {
+        // .......................................123456789012345678901234567890...
         $text = "<div class='frog'><p><blockquote>Long text with tags that will ".
             "be chopped off but <b>should be added back again</b></blockquote></p></div>";
         $this->assertEquals("<div class='frog'><p><blockquote>Long text with " .
             "tags that ...</blockquote></p></div>", shorten_text($text));
+    }
 
+    function test_shorten_text_with_entities() {
+        // Remember to allow 3 chars for the final '...'.
+        // ......123456789012345678901234567_____890...
         $text = "some text which shouldn't &nbsp; break there";
         $this->assertEquals("some text which shouldn't &nbsp; ...",
             shorten_text($text, 31));
-        $this->assertEquals("some text which shouldn't ...",
+        $this->assertEquals("some text which shouldn't &nbsp;...",
             shorten_text($text, 30));
+        $this->assertEquals("some text which shouldn't ...",
+            shorten_text($text, 29));
+    }
 
+    function test_shorten_text_known_tricky_case() {
         // This case caused a bug up to 1.9.5
+        // ..........123456789012345678901234567890123456789.....0_____1___2___...
         $text = "<h3>standard 'break-out' sub groups in TGs?</h3>&nbsp;&lt;&lt;There are several";
         $this->assertEquals("<h3>standard 'break-out' sub groups in ...</h3>",
+            shorten_text($text, 41));
+        $this->assertEquals("<h3>standard 'break-out' sub groups in TGs?...</h3>",
+            shorten_text($text, 42));
+        $this->assertEquals("<h3>standard 'break-out' sub groups in TGs?</h3>&nbsp;...",
             shorten_text($text, 43));
+    }
 
-        $text = "<h1>123456789</h1>";//a string with no convenient breaks
+    function test_shorten_text_no_spaces() {
+        // ..........123456789.
+        $text = "<h1>123456789</h1>"; // A string with no convenient breaks.
         $this->assertEquals("<h1>12345...</h1>",
             shorten_text($text, 8));
+    }
 
-        // ==== this must work with UTF-8 too! ======
-
-        // text without tags
+    function test_shorten_text_utf8_european() {
+        // Text without tags.
+        // ......123456789012345678901234567.
         $text = "Žluťoučký koníček přeskočil";
-        $this->assertEquals($text, shorten_text($text)); // 30 chars by default
+        $this->assertEquals($text, shorten_text($text)); // 30 chars by default.
         $this->assertEquals("Žluťoučký koníče...", shorten_text($text, 19, true));
         $this->assertEquals("Žluťoučký ...", shorten_text($text, 19, false));
-        // And try it with 2-less (that are, in bytes, the middle of a sequence)
+        // And try it with 2-less (that are, in bytes, the middle of a sequence).
         $this->assertEquals("Žluťoučký koní...", shorten_text($text, 17, true));
         $this->assertEquals("Žluťoučký ...", shorten_text($text, 17, false));
 
+        // .........123456789012345678...901234567....89012345.
         $text = "<p>Žluťoučký koníček <b>přeskočil</b> potůček</p>";
         $this->assertEquals($text, shorten_text($text, 60));
         $this->assertEquals("<p>Žluťoučký koníček ...</p>", shorten_text($text, 21));
         $this->assertEquals("<p>Žluťoučký koníče...</p>", shorten_text($text, 19, true));
         $this->assertEquals("<p>Žluťoučký ...</p>", shorten_text($text, 19, false));
-        // And try it with 2-less (that are, in bytes, the middle of a sequence)
+        // And try it with 2 fewer (that are, in bytes, the middle of a sequence).
         $this->assertEquals("<p>Žluťoučký koní...</p>", shorten_text($text, 17, true));
         $this->assertEquals("<p>Žluťoučký ...</p>", shorten_text($text, 17, false));
-        // And try over one tag (start/end), it does proper text len
+        // And try over one tag (start/end), it does proper text len.
         $this->assertEquals("<p>Žluťoučký koníček <b>př...</b></p>", shorten_text($text, 23, true));
         $this->assertEquals("<p>Žluťoučký koníček <b>přeskočil</b> pot...</p>", shorten_text($text, 34, true));
-        // And in the middle of one tag
+        // And in the middle of one tag.
         $this->assertEquals("<p>Žluťoučký koníček <b>přeskočil...</b></p>", shorten_text($text, 30, true));
+    }
 
+    function test_shorten_text_utf8_oriental() {
         // Japanese
+        // text without tags
+        // ......123456789012345678901234.
         $text = '言語設定言語設定abcdefghijkl';
         $this->assertEquals($text, shorten_text($text)); // 30 chars by default
         $this->assertEquals("言語設定言語...", shorten_text($text, 9, true));
@@ -1161,13 +1232,27 @@ class moodlelib_testcase extends advanced_testcase {
         $this->assertEquals("言語設定言語設定...", shorten_text($text, 13, false));
 
         // Chinese
+        // text without tags
+        // ......123456789012345678901234.
         $text = '简体中文简体中文abcdefghijkl';
         $this->assertEquals($text, shorten_text($text)); // 30 chars by default
         $this->assertEquals("简体中文简体...", shorten_text($text, 9, true));
         $this->assertEquals("简体中文简体...", shorten_text($text, 9, false));
         $this->assertEquals("简体中文简体中文ab...", shorten_text($text, 13, true));
         $this->assertEquals("简体中文简体中文...", shorten_text($text, 13, false));
+    }
 
+    function test_shorten_text_multilang() {
+        // This is not necessaryily specific to multilang. The issue is really
+        // tags with attributes, where before we were generating invalid HTML
+        // output like shorten_text('<span id="x" class="y">A</span> B', 1);
+        // returning '<span id="x" ...</span>'. It is just that multilang
+        // requires the sort of HTML that is quite likely to trigger this.
+        // ........................................1...
+        $text = '<span lang="en" class="multilang">A</span>' .
+                '<span lang="fr" class="multilang">B</span>';
+        $this->assertEquals('<span lang="en" class="multilang">...</span>',
+                shorten_text($text, 1));
     }
 
     function test_usergetdate() {
@@ -1537,6 +1622,59 @@ class moodlelib_testcase extends advanced_testcase {
         // in-memory anyhow
         $CFG->showuseridentity = $oldshowuseridentity;
         $USER = $olduser;
+    }
+
+    /**
+     * Test some critical TZ/DST.
+     *
+     * This method tests some special TZ/DST combinations that were fixed
+     * by MDL-38999. The tests are done by comparing the results of the
+     * output using Moodle TZ/DST support and PHP native one.
+     *
+     * Note: If you don't trust PHP TZ/DST support, can verify the
+     * harcoded expectations below with:
+     * http://www.tools4noobs.com/online_tools/unix_timestamp_to_datetime/
+     */
+    public function test_some_moodle_special_dst() {
+        $stamp = 1365386400; // 2013/04/08 02:00:00 GMT/UTC.
+
+        // In Europe/Tallinn it was 2013/04/08 05:00:00.
+        $expectation = '2013/04/08 05:00:00';
+        $phpdt = DateTime::createFromFormat('U', $stamp, new DateTimeZone('UTC'));
+        $phpdt->setTimezone(new DateTimeZone('Europe/Tallinn'));
+        $phpres = $phpdt->format('Y/m/d H:i:s'); // PHP result.
+        $moodleres = userdate($stamp, '%Y/%m/%d %H:%M:%S', 'Europe/Tallinn', false); // Moodle result.
+        $this->assertSame($expectation, $phpres);
+        $this->assertSame($expectation, $moodleres);
+
+        // In St. Johns it was 2013/04/07 23:30:00.
+        $expectation = '2013/04/07 23:30:00';
+        $phpdt = DateTime::createFromFormat('U', $stamp, new DateTimeZone('UTC'));
+        $phpdt->setTimezone(new DateTimeZone('America/St_Johns'));
+        $phpres = $phpdt->format('Y/m/d H:i:s'); // PHP result.
+        $moodleres = userdate($stamp, '%Y/%m/%d %H:%M:%S', 'America/St_Johns', false); // Moodle result.
+        $this->assertSame($expectation, $phpres);
+        $this->assertSame($expectation, $moodleres);
+
+        $stamp = 1383876000; // 2013/11/08 02:00:00 GMT/UTC.
+
+        // In Europe/Tallinn it was 2013/11/08 04:00:00.
+        $expectation = '2013/11/08 04:00:00';
+        $phpdt = DateTime::createFromFormat('U', $stamp, new DateTimeZone('UTC'));
+        $phpdt->setTimezone(new DateTimeZone('Europe/Tallinn'));
+        $phpres = $phpdt->format('Y/m/d H:i:s'); // PHP result.
+        $moodleres = userdate($stamp, '%Y/%m/%d %H:%M:%S', 'Europe/Tallinn', false); // Moodle result.
+        $this->assertSame($expectation, $phpres);
+        $this->assertSame($expectation, $moodleres);
+
+        // In St. Johns it was 2013/11/07 22:30:00.
+        $expectation = '2013/11/07 22:30:00';
+        $phpdt = DateTime::createFromFormat('U', $stamp, new DateTimeZone('UTC'));
+        $phpdt->setTimezone(new DateTimeZone('America/St_Johns'));
+        $phpres = $phpdt->format('Y/m/d H:i:s'); // PHP result.
+        $moodleres = userdate($stamp, '%Y/%m/%d %H:%M:%S', 'America/St_Johns', false); // Moodle result.
+        $this->assertSame($expectation, $phpres);
+        $this->assertSame($expectation, $moodleres);
     }
 
     public function test_userdate() {
@@ -2007,7 +2145,6 @@ class moodlelib_testcase extends advanced_testcase {
      * Test localised float formatting.
      */
     public function test_format_float() {
-        global $SESSION, $CFG;
 
         // Special case for null
         $this->assertEquals('', format_float(null));
@@ -2023,17 +2160,8 @@ class moodlelib_testcase extends advanced_testcase {
         $this->assertEquals('5.43', format_float(5.43, 5, true, true));
         $this->assertEquals('5', format_float(5.0001, 3, true, true));
 
-        // It is not possible to directly change the result of get_string in
-        // a unit test. Instead, we create a language pack for language 'xx' in
-        // dataroot and make langconfig.php with the string we need to change.
-        // The example separator used here is 'X'; on PHP 5.3 and before this
-        // must be a single byte character due to PHP bug/limitation in
-        // number_format, so you can't use UTF-8 characters.
-        $SESSION->lang = 'xx';
-        $langconfig = "<?php\n\$string['decsep'] = 'X';";
-        $langfolder = $CFG->dataroot . '/lang/xx';
-        check_dir_exists($langfolder);
-        file_put_contents($langfolder . '/langconfig.php', $langconfig);
+        // Tests with a localised decimal separator.
+        $this->define_local_decimal_separator();
 
         // Localisation on (default)
         $this->assertEquals('5X43000', format_float(5.43, 5));
@@ -2042,6 +2170,80 @@ class moodlelib_testcase extends advanced_testcase {
         // Localisation off
         $this->assertEquals('5.43000', format_float(5.43, 5, false));
         $this->assertEquals('5.43', format_float(5.43, 5, false, true));
+    }
+
+    /**
+     * Test localised float unformatting.
+     */
+    public function test_unformat_float() {
+
+        // Tests without the localised decimal separator.
+
+        // Special case for null, empty or white spaces only strings.
+        $this->assertEquals(null, unformat_float(null));
+        $this->assertEquals(null, unformat_float(''));
+        $this->assertEquals(null, unformat_float('    '));
+
+        // Regular use.
+        $this->assertEquals(5.4, unformat_float('5.4'));
+        $this->assertEquals(5.4, unformat_float('5.4', true));
+
+        // No decimal.
+        $this->assertEquals(5.0, unformat_float('5'));
+
+        // Custom number of decimal.
+        $this->assertEquals(5.43267, unformat_float('5.43267'));
+
+        // Empty decimal.
+        $this->assertEquals(100.0, unformat_float('100.00'));
+
+        // With the thousand separator.
+        $this->assertEquals(1000.0, unformat_float('1 000'));
+        $this->assertEquals(1000.32, unformat_float('1 000.32'));
+
+        // Negative number.
+        $this->assertEquals(-100.0, unformat_float('-100'));
+
+        // Wrong value.
+        $this->assertEquals(0.0, unformat_float('Wrong value'));
+        // Wrong value in strict mode.
+        $this->assertFalse(unformat_float('Wrong value', true));
+
+        // Combining options.
+        $this->assertEquals(-1023.862567, unformat_float('   -1 023.862567     '));
+
+        // Bad decimal separator (should crop the decimal).
+        $this->assertEquals(50.0, unformat_float('50,57'));
+        // Bad decimal separator in strict mode (should return false).
+        $this->assertFalse(unformat_float('50,57', true));
+
+        // Tests with a localised decimal separator.
+        $this->define_local_decimal_separator();
+
+        // We repeat the tests above but with the current decimal separator.
+
+        // Regular use without and with the localised separator.
+        $this->assertEquals (5.4, unformat_float('5.4'));
+        $this->assertEquals (5.4, unformat_float('5X4'));
+
+        // Custom number of decimal.
+        $this->assertEquals (5.43267, unformat_float('5X43267'));
+
+        // Empty decimal.
+        $this->assertEquals (100.0, unformat_float('100X00'));
+
+        // With the thousand separator.
+        $this->assertEquals (1000.32, unformat_float('1 000X32'));
+
+        // Bad different separator (should crop the decimal).
+        $this->assertEquals (50.0, unformat_float('50Y57'));
+        // Bad different separator in strict mode (should return false).
+        $this->assertFalse (unformat_float('50Y57', true));
+
+        // Combining options.
+        $this->assertEquals (-1023.862567, unformat_float('   -1 023X862567     '));
+        // Combining options in strict mode.
+        $this->assertEquals (-1023.862567, unformat_float('   -1 023X862567     ', true));
     }
 
     /**
@@ -2244,5 +2446,216 @@ class moodlelib_testcase extends advanced_testcase {
         $this->assertFalse($cache->get('core'));
         set_config('phpunit_test_get_config_4', 'test c', 'mod_forum');
         $this->assertFalse($cache->get('mod_forum'));
+    }
+
+    function test_get_max_upload_sizes() {
+        // Test with very low limits so we are not affected by php upload limits.
+        // Test activity limit smallest.
+        $sitebytes = 102400;
+        $coursebytes = 51200;
+        $modulebytes = 10240;
+        $result = get_max_upload_sizes($sitebytes, $coursebytes, $modulebytes);
+
+        $this->assertEquals('Activity upload limit (10KB)', $result['0']);
+        $this->assertEquals(2, count($result));
+
+        // Test course limit smallest.
+        $sitebytes = 102400;
+        $coursebytes = 10240;
+        $modulebytes = 51200;
+        $result = get_max_upload_sizes($sitebytes, $coursebytes, $modulebytes);
+
+        $this->assertEquals('Course upload limit (10KB)', $result['0']);
+        $this->assertEquals(2, count($result));
+
+        // Test site limit smallest.
+        $sitebytes = 10240;
+        $coursebytes = 102400;
+        $modulebytes = 51200;
+        $result = get_max_upload_sizes($sitebytes, $coursebytes, $modulebytes);
+
+        $this->assertEquals('Site upload limit (10KB)', $result['0']);
+        $this->assertEquals(2, count($result));
+
+        // Test site limit not set.
+        $sitebytes = 0;
+        $coursebytes = 102400;
+        $modulebytes = 51200;
+        $result = get_max_upload_sizes($sitebytes, $coursebytes, $modulebytes);
+
+        $this->assertEquals('Activity upload limit (50KB)', $result['0']);
+        $this->assertEquals(3, count($result));
+
+        $sitebytes = 0;
+        $coursebytes = 51200;
+        $modulebytes = 102400;
+        $result = get_max_upload_sizes($sitebytes, $coursebytes, $modulebytes);
+
+        $this->assertEquals('Course upload limit (50KB)', $result['0']);
+        $this->assertEquals(3, count($result));
+
+        // Test custom bytes in range.
+        $sitebytes = 102400;
+        $coursebytes = 51200;
+        $modulebytes = 51200;
+        $custombytes = 10240;
+        $result = get_max_upload_sizes($sitebytes, $coursebytes, $modulebytes, $custombytes);
+
+        $this->assertEquals(3, count($result));
+
+        // Test custom bytes in range but non-standard.
+        $sitebytes = 102400;
+        $coursebytes = 51200;
+        $modulebytes = 51200;
+        $custombytes = 25600;
+        $result = get_max_upload_sizes($sitebytes, $coursebytes, $modulebytes, $custombytes);
+
+        $this->assertEquals(4, count($result));
+
+        // Test custom bytes out of range.
+        $sitebytes = 102400;
+        $coursebytes = 51200;
+        $modulebytes = 51200;
+        $custombytes = 102400;
+        $result = get_max_upload_sizes($sitebytes, $coursebytes, $modulebytes, $custombytes);
+
+        $this->assertEquals(3, count($result));
+
+        // Test custom bytes out of range and non-standard.
+        $sitebytes = 102400;
+        $coursebytes = 51200;
+        $modulebytes = 51200;
+        $custombytes = 256000;
+        $result = get_max_upload_sizes($sitebytes, $coursebytes, $modulebytes, $custombytes);
+
+        $this->assertEquals(3, count($result));
+
+        // Test site limit only.
+        $sitebytes = 51200;
+        $result = get_max_upload_sizes($sitebytes);
+
+        $this->assertEquals('Site upload limit (50KB)', $result['0']);
+        $this->assertEquals('50KB', $result['51200']);
+        $this->assertEquals('10KB', $result['10240']);
+        $this->assertCount(3, $result);
+
+        // Test no limit.
+        $result = get_max_upload_sizes();
+        $this->assertArrayHasKey('0', $result);
+        $this->assertArrayHasKey(get_max_upload_file_size(), $result);
+    }
+
+    /**
+     * Test function password_is_legacy_hash().
+     */
+    public function test_password_is_legacy_hash() {
+        // Well formed md5s should be matched.
+        foreach (array('some', 'strings', 'to_check!') as $string) {
+            $md5 = md5($string);
+            $this->assertTrue(password_is_legacy_hash($md5));
+        }
+        // Strings that are not md5s should not be matched.
+        foreach (array('', AUTH_PASSWORD_NOT_CACHED, 'IPW8WTcsWNgAWcUS1FBVHegzJnw5M2jOmYkmfc8z.xdBOyC4Caeum') as $notmd5) {
+            $this->assertFalse(password_is_legacy_hash($notmd5));
+        }
+    }
+
+    /**
+     * Test function validate_internal_user_password().
+     */
+    public function test_validate_internal_user_password() {
+        if (password_compat_not_supported()) {
+            // If bcrypt is not properly supported test legacy md5 hashes instead.
+            // Can't hardcode these as we don't know the site's password salt.
+            $validhashes = array(
+                'pw' => hash_internal_user_password('pw'),
+                'abc' => hash_internal_user_password('abc'),
+                'C0mP1eX_&}<?@*&%` |\"' => hash_internal_user_password('C0mP1eX_&}<?@*&%` |\"'),
+                'ĩńťėŕňăţĩōŋāĹ' => hash_internal_user_password('ĩńťėŕňăţĩōŋāĹ')
+            );
+        } else {
+            // Otherwise test bcrypt hashes.
+            $validhashes = array(
+                'pw' => '$2y$10$LOSDi5eaQJhutSRun.OVJ.ZSxQZabCMay7TO1KmzMkDMPvU40zGXK',
+                'abc' => '$2y$10$VWTOhVdsBbWwtdWNDRHSpewjd3aXBQlBQf5rBY/hVhw8hciarFhXa',
+                'C0mP1eX_&}<?@*&%` |\"' => '$2y$10$3PJf.q.9ywNJlsInPbqc8.IFeSsvXrGvQLKRFBIhVu1h1I3vpIry6',
+                'ĩńťėŕňăţĩōŋāĹ' => '$2y$10$3A2Y8WpfRAnP3czJiSv6N.6Xp0T8hW3QZz2hUCYhzyWr1kGP1yUve'
+            );
+        }
+
+        foreach ($validhashes as $password => $hash) {
+            $user = new stdClass();
+            $user->auth = 'manual';
+            $user->password = $hash;
+            // The correct password should be validated.
+            $this->assertTrue(validate_internal_user_password($user, $password));
+            // An incorrect password should not be validated.
+            $this->assertFalse(validate_internal_user_password($user, 'badpw'));
+        }
+    }
+
+    /**
+     * Test function hash_internal_user_password().
+     */
+    public function test_hash_internal_user_password() {
+        $passwords = array('pw', 'abc123', 'C0mP1eX_&}<?@*&%` |\"', 'ĩńťėŕňăţĩōŋāĹ');
+
+        // Check that some passwords that we convert to hashes can
+        // be validated.
+        foreach ($passwords as $password) {
+            $hash = hash_internal_user_password($password);
+            $fasthash = hash_internal_user_password($password, true);
+            $user = new stdClass();
+            $user->auth = 'manual';
+            $user->password = $hash;
+            $this->assertTrue(validate_internal_user_password($user, $password));
+
+            if (password_compat_not_supported()) {
+                // If bcrypt is not properly supported make sure the passwords are in md5 format.
+                $this->assertTrue(password_is_legacy_hash($hash));
+            } else {
+                // Otherwise they should not be in md5 format.
+                $this->assertFalse(password_is_legacy_hash($hash));
+
+                // Check that cost factor in hash is correctly set.
+                $this->assertRegExp('/\$10\$/', $hash);
+                $this->assertRegExp('/\$04\$/', $fasthash);
+            }
+        }
+    }
+
+    /**
+     * Test function update_internal_user_password().
+     */
+    public function test_update_internal_user_password() {
+        global $DB;
+        $this->resetAfterTest();
+        $passwords = array('password', '1234', 'changeme', '****');
+        foreach ($passwords as $password) {
+            $user = $this->getDataGenerator()->create_user(array('auth'=>'manual'));
+            update_internal_user_password($user, $password);
+            // The user object should have been updated.
+            $this->assertTrue(validate_internal_user_password($user, $password));
+            // The database field for the user should also have been updated to the
+            // same value.
+            $this->assertEquals($user->password, $DB->get_field('user', 'password', array('id' => $user->id)));
+        }
+
+        $user = $this->getDataGenerator()->create_user(array('auth'=>'manual'));
+        // Manually set the user's password to the md5 of the string 'password'.
+        $DB->set_field('user', 'password', '5f4dcc3b5aa765d61d8327deb882cf99', array('id' => $user->id));
+
+        // Update the password.
+        update_internal_user_password($user, 'password');
+
+        if (password_compat_not_supported()) {
+            // If bcrypt not properly supported the password should remain as an md5 hash.
+            $expected_hash = hash_internal_user_password('password', true);
+            $this->assertEquals($user->password, $expected_hash);
+            $this->assertTrue(password_is_legacy_hash($user->password));
+        } else {
+            // Otherwise password should have been updated to a bcrypt hash.
+            $this->assertFalse(password_is_legacy_hash($user->password));
+        }
     }
 }

@@ -69,6 +69,7 @@ class mod_quiz_mod_form extends moodleform_mod {
             $mform->setType('name', PARAM_CLEANHTML);
         }
         $mform->addRule('name', null, 'required', null, 'client');
+        $mform->addRule('name', get_string('maximumchars', '', 255), 'maxlength', 255, 'client');
 
         // Introduction.
         $this->add_intro_editor(false, get_string('introduction', 'quiz'));
@@ -346,8 +347,8 @@ class mod_quiz_mod_form extends moodleform_mod {
         $repeatarray = array();
         $repeatedoptions = array();
         $repeatarray[] = $mform->createElement('editor', 'feedbacktext',
-                get_string('feedback', 'quiz'), null, array('maxfiles' => EDITOR_UNLIMITED_FILES,
-                        'noclean' => true, 'context' => $this->context));
+                get_string('feedback', 'quiz'), array('rows' => 3), array('maxfiles' => EDITOR_UNLIMITED_FILES,
+                        'noclean' => true, 'context' => $this->context, 'collapsed' => 1));
         $repeatarray[] = $mform->createElement('text', 'feedbackboundaries',
                 get_string('gradeboundary', 'quiz'), array('size' => 10));
         $repeatedoptions['feedbacktext']['type'] = PARAM_RAW;
@@ -367,9 +368,9 @@ class mod_quiz_mod_form extends moodleform_mod {
 
         // Put some extra elements in before the button.
         $mform->insertElementBefore($mform->createElement('editor',
-                "feedbacktext[$nextel]", get_string('feedback', 'quiz'), null,
+                "feedbacktext[$nextel]", get_string('feedback', 'quiz'), array('rows' => 3),
                 array('maxfiles' => EDITOR_UNLIMITED_FILES, 'noclean' => true,
-                      'context' => $this->context)),
+                      'context' => $this->context, 'collapsed' => 1)),
                 'boundary_add_fields');
         $mform->insertElementBefore($mform->createElement('static',
                 'gradeboundarystatic2', get_string('gradeboundary', 'quiz'), '0%'),
@@ -387,6 +388,10 @@ class mod_quiz_mod_form extends moodleform_mod {
 
         // Check and act on whether setting outcomes is considered an advanced setting.
         $mform->setAdvanced('modoutcomes', !empty($quizconfig->outcomes_adv));
+
+        // The standard_coursemodule_elements method sets this to 100, but the
+        // quiz has its own setting, so use that.
+        $mform->setDefault('grade', $quizconfig->maximumgrade);
 
         // -------------------------------------------------------------------------------
         $this->add_action_buttons();
@@ -570,6 +575,9 @@ class mod_quiz_mod_form extends moodleform_mod {
                         get_string('feedbackerrorjunkinfeedback', 'quiz', $i + 1);
             }
         }
+
+        // Any other rule plugins.
+        $errors = quiz_access_manager::validate_settings_form_fields($errors, $data, $files, $this);
 
         return $errors;
     }
