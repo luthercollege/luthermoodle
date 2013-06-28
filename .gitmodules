@@ -4,6 +4,3 @@
 [submodule "mod/questionnaire"]
 	path = mod/questionnaire
 	url = /opt/local/apache2/htdocs/questionnaire
-[submodule "blocks/quickset"]
-	path = blocks/quickset
-	url = /opt/local/apache2/htdocs/quickset
