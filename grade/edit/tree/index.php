@@ -100,6 +100,28 @@ if (!is_null($category) && !is_null($aggregationtype) && confirm_sesskey()) {
 
     $data = new stdClass();
     $data->aggregation = $aggregationtype;
+
+    // RT# 57186 20100115 kimx0794.
+    // Go through and set the aggregationcoef for all the children to 0 when switching from WM to SUM/SWM.
+    if ($grade_category->aggregation == GRADE_AGGREGATE_WEIGHTED_MEAN AND ($aggregationtype == GRADE_AGGREGATE_WEIGHTED_MEAN2
+        OR $aggregationtype == GRADE_AGGREGATE_SUM)) {
+    	$grade_category->children = $grade_category->get_children();
+    	foreach ( $grade_category->children as $useditem) {
+    		$useditem['object']->grade_item = $useditem['object']->get_grade_item();
+    		$useditem['object']->grade_item->aggregationcoef = 0;
+    		$useditem['object']->grade_item->update();
+    	}
+    // Go through and set the aggregationcoef for all the children to 1 when switching from SUM/SWM to WM.
+    } elseif (($grade_category->aggregation == GRADE_AGGREGATE_WEIGHTED_MEAN2 OR $grade_category->aggregation == GRADE_AGGREGATE_SUM)
+              AND $aggregationtype == GRADE_AGGREGATE_WEIGHTED_MEAN) {
+        $grade_category->children = $grade_category->get_children();
+        foreach ( $grade_category->children as $useditem) {
+                $useditem['object']->grade_item = $useditem['object']->get_grade_item();
+                $useditem['object']->grade_item->aggregationcoef = 1;
+                $useditem['object']->grade_item->update();
+        }
+    }
+
     grade_category::set_properties($grade_category, $data);
     $grade_category->update();
 

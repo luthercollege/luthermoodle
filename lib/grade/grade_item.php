@@ -1263,8 +1263,16 @@ class grade_item extends grade_object {
         // MDL-19407 If moving from a non-SWM category to a SWM category, convert aggregationcoef to 0
         $currentparent = $this->load_parent_category();
 
-        if ($currentparent->aggregation != GRADE_AGGREGATE_WEIGHTED_MEAN2 && $parent_category->aggregation == GRADE_AGGREGATE_WEIGHTED_MEAN2) {
+        // RT# 57186 20100115 kimx0794.
+        // If moving from a non-SWM/non-SUM category to a SUM/SWM category, convert aggregationcoef to 0.
+        if ($currentparent->aggregation != GRADE_AGGREGATE_WEIGHTED_MEAN2 && $currentparent->aggregation != GRADE_AGGREGATE_SUM
+            && ($parent_category->aggregation == GRADE_AGGREGATE_WEIGHTED_MEAN2 || $parent_category->aggregation == GRADE_AGGREGATE_SUM)) {
             $this->aggregationcoef = 0;
+
+        // If moving from a non-WM category to a WM category, convert aggregationcoef to 1.
+        } elseif (($currentparent->aggregation == GRADE_AGGREGATE_WEIGHTED_MEAN2 || $currentparent->aggregation == GRADE_AGGREGATE_SUM)
+            && $parent_category->aggregation == GRADE_AGGREGATE_WEIGHTED_MEAN) {
+            $this->aggregationcoef = 1;
         }
 
         $this->force_regrading();
