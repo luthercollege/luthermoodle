@@ -26,6 +26,8 @@ require_once '../../../config.php';
 require_once $CFG->dirroot.'/grade/lib.php';
 require_once $CFG->dirroot.'/grade/report/lib.php'; // for preferences
 require_once $CFG->dirroot.'/grade/edit/tree/lib.php';
+require_once $CFG->dirroot.'/grade/report/laegrader/locallib.php';
+
 
 $courseid        = required_param('id', PARAM_INT);
 $action          = optional_param('action', 0, PARAM_ALPHA);
@@ -133,7 +135,7 @@ grade_regrade_final_grades($courseid);
 
 // get the grading tree object
 // note: total must be first for moving to work correctly, if you want it last moving code must be rewritten!
-$gtree = new grade_tree($courseid, false, false);
+$gtree = grade_tree_local_helper($courseid, false, false, null, false, 0);
 
 if (empty($eid)) {
     $element = null;

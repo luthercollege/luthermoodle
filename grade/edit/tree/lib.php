@@ -60,9 +60,9 @@ class grade_edit_tree {
         $accuratetotals		= ($temp = grade_get_setting($COURSE->id, 'report_laegrader_accuratetotals', $CFG->grade_report_laegrader_accuratetotals)) ? $temp : 0;
         if ($accuratetotals) {
 			$gtree->cats = array();
-	        fill_cats($gtree);
+	        $gtree->fill_cats();
         	$gtree->parents = array();
-	        fill_parents($gtree->parents, $gtree->items,$gtree->cats, $gtree->top_element, $gtree->top_element['object']->grade_item->id, $accuratetotals);
+	        $gtree->fill_parents($gtree->top_element, $gtree->top_element['object']->grade_item->id, $accuratetotals);
         }
 	    // end of hack
 
