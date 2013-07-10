@@ -49,6 +49,9 @@ class grade_edit_tree {
     public $table;
 
     public $categories = array();
+
+    public $showtotalsifcontainhidden;
+
     /**
      * Constructor
      */
@@ -58,11 +61,13 @@ class grade_edit_tree {
 		// hack to allow for accuratetotals
 		require_once "$CFG->dirroot/grade/report/laegrader/locallib.php";
         $accuratetotals		= ($temp = grade_get_setting($COURSE->id, 'report_laegrader_accuratetotals', $CFG->grade_report_laegrader_accuratetotals)) ? $temp : 0;
+        $gtree->cats = array();
+        $gtree->fill_cats();
         if ($accuratetotals) {
-			$gtree->cats = array();
-	        $gtree->fill_cats();
+            $this->showtotalsifcontainhidden = array($COURSE->id => grade_get_setting($COURSE->id, 'report_user_showtotalsifcontainhidden', $CFG->grade_report_user_showtotalsifcontainhidden));
+            $showtotalsifcontainhidden = $this->showtotalsifcontainhidden[$COURSE->id];
         	$gtree->parents = array();
-	        $gtree->fill_parents($gtree->top_element, $gtree->top_element['object']->grade_item->id, $accuratetotals);
+	        $gtree->fill_parents($gtree->top_element, $gtree->top_element['object']->grade_item->id, $showtotalsifcontainhidden);
         }
 	    // end of hack
 
@@ -819,7 +824,7 @@ class grade_edit_tree_column_range extends grade_edit_tree_column {
             $grademax = format_float($item->grademax, $item->get_decimals());
 
         // hack for calculating accurate total points for categories and course
-        } elseif ($params['accuratetotals'] && ($params['itemtype'] == 'course' || $params['itemtype'] == 'category')) {
+        } elseif ($params['accuratetotals'] && ($params['itemtype'] === 'course' || $params['itemtype'] == 'category')) {
         	$grademax = (isset($item->max_earnable)) ? format_float($item->max_earnable, $item->get_decimals()) : format_float($item->grademax, $item->get_decimals());
 
         } elseif ($item->gradetype == GRADE_TYPE_SCALE) {
