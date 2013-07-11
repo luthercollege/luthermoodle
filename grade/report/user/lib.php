@@ -442,6 +442,8 @@ class grade_report_user extends grade_report {
                 			    $grade_grade->grade_item->grademax; // if we're using WM store aggcoef, otherwise store grade_max (natural weight)
 							$parents[$parent_id]->cat_max[$eid] = $grade_grade->grade_item->grademax;
 							$parents[$parent_id]->pctg[$eid] = $gradeval / $grade_grade->grade_item->grademax;
+	              		} else {
+	              		    $parents[$parent_id]->pctg[$eid] = null;
 	              		}
                 	} else { // categoryitems or courseitems
 						// set up variables that are used in this inserted limit_rules scrap
@@ -480,7 +482,9 @@ class grade_report_user extends grade_report {
 		               	    $weighted_percentage = 0;
 		               	    foreach ($parents[$eid]->pctg as $key=>$pctg) {
 		               	        // the previously calculated percentage (which might already be weighted) times the normalizer * the weight
-		               	        $weighted_percentage += $pctg*$weight_normalizer*$parents[$eid]->agg_coef[$key];
+		               	        if ($pctg !== null) {
+		               	            $weighted_percentage += $pctg*$weight_normalizer*$parents[$eid]->agg_coef[$key];
+		               	        }
 		               	    }
 		               	    $parents[$eid]->coursepctg = $weighted_percentage;
 
