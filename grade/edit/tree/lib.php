@@ -49,11 +49,27 @@ class grade_edit_tree {
     public $table;
 
     public $categories = array();
+
+    public $showtotalsifcontainhidden;
+
     /**
      * Constructor
      */
     public function __construct($gtree, $moving=false, $gpr) {
-        global $USER, $OUTPUT, $COURSE;
+        global $USER, $OUTPUT, $COURSE, $CFG;
+
+		// hack to allow for accuratetotals
+		require_once "$CFG->dirroot/grade/report/laegrader/locallib.php";
+        $accuratetotals		= ($temp = grade_get_setting($COURSE->id, 'report_laegrader_accuratetotals', $CFG->grade_report_laegrader_accuratetotals)) ? $temp : 0;
+        $gtree->cats = array();
+        $gtree->fill_cats();
+        if ($accuratetotals) {
+            $this->showtotalsifcontainhidden = array($COURSE->id => grade_get_setting($COURSE->id, 'report_user_showtotalsifcontainhidden', $CFG->grade_report_user_showtotalsifcontainhidden));
+            $showtotalsifcontainhidden = $this->showtotalsifcontainhidden[$COURSE->id];
+        	$gtree->parents = array();
+	        $gtree->fill_parents($gtree->top_element, $gtree->top_element['object']->grade_item->id, $showtotalsifcontainhidden);
+        }
+	    // end of hack
 
         $this->gtree = $gtree;
         $this->moving = $moving;
@@ -101,7 +117,7 @@ class grade_edit_tree {
         }
 
         $rowcount = 0;
-        $this->table->data = $this->build_html_tree($this->gtree->top_element, true, array(), 0, $rowcount);
+        $this->table->data = $this->build_html_tree($this->gtree->top_element, true, array(), 0, $rowcount, $accuratetotals);
     }
 
     /**
@@ -114,7 +130,7 @@ class grade_edit_tree {
      *
      * @return string HTML
      */
-    public function build_html_tree($element, $totals, $parents, $level, &$row_count) {
+    public function build_html_tree($element, $totals, $parents, $level, &$row_count, $accuratetotals) {
         global $CFG, $COURSE, $USER, $OUTPUT;
 
         $object = $element['object'];
@@ -240,12 +256,16 @@ class grade_edit_tree {
                     $html_children[] = $moveto;
                 } elseif ($child_el['object']->itemtype == 'course' || $child_el['object']->itemtype == 'category') {
                     // We don't build the item yet because we first need to know the deepest level of categories (for category/name colspans)
-                    $category_total_item = $this->build_html_tree($child_el, $totals, $newparents, $level, $child_row_count);
+
+                    // hack to allow for accuratetotals
+                	$category_total_item = $this->build_html_tree($child_el, $totals, $newparents, $level, $child_row_count, $accuratetotals);
+                    // end of hack
+
                     if (!$aggregation_position) {
                         $html_children = array_merge($html_children, $category_total_item);
                     }
                 } else {
-                    $html_children = array_merge($html_children, $this->build_html_tree($child_el, $totals, $newparents, $level, $child_row_count));
+                    $html_children = array_merge($html_children, $this->build_html_tree($child_el, $totals, $newparents, $level, $child_row_count, $accuratetotals));
                     if (!empty($moveto)) {
                         $html_children[] = $moveto;
                     }
@@ -313,8 +333,10 @@ class grade_edit_tree {
 
         } else { // Dealing with a grade item
 
-            $item = grade_item::fetch(array('id' => $object->id));
-            $element['type'] = 'item';
+			// hack to allow for accuratetotals
+//        	$item = grade_item::fetch(array('id' => $object->id));
+			$item = $object;
+        	$element['type'] = 'item';
             $element['object'] = $item;
 
             $categoryitemclass = '';
@@ -331,8 +353,11 @@ class grade_edit_tree {
 
             foreach ($this->columns as $column) {
                 if (!($this->moving && $column->hide_when_moving) && !$column->is_hidden($mode)) {
-                    $gradeitemrow->cells[] = $column->get_item_cell($item, array('id' => $id, 'name' => $object->name, 'level' => $level, 'actions' => $actions,
-                                                                 'element' => $element, 'eid' => $eid, 'itemtype' => $object->itemtype));
+//                    $gradeitemrow->cells[] = $column->get_item_cell($item, array('id' => $id, 'name' => $object->name, 'level' => $level, 'actions' => $actions,
+//                                                                 'element' => $element, 'eid' => $eid, 'itemtype' => $object->itemtype));
+                    // hack to provide for accuratetotals
+                	$gradeitemrow->cells[] = $column->get_item_cell($item, array('id' => $id, 'name' => $object->name, 'level' => $level, 'actions' => $actions,
+                                                                 'element' => $element, 'eid' => $eid, 'itemtype' => $object->itemtype, 'accuratetotals' => $accuratetotals));
                 }
             }
 
@@ -797,6 +822,11 @@ class grade_edit_tree_column_range extends grade_edit_tree_column {
         $parent_cat = $item->get_parent_category();
         if ($parent_cat->aggregation == GRADE_AGGREGATE_SUM) {
             $grademax = format_float($item->grademax, $item->get_decimals());
+
+        // hack for calculating accurate total points for categories and course
+        } elseif ($params['accuratetotals'] && ($params['itemtype'] === 'course' || $params['itemtype'] == 'category')) {
+        	$grademax = (isset($item->max_earnable)) ? format_float($item->max_earnable, $item->get_decimals()) : format_float($item->grademax, $item->get_decimals());
+
         } elseif ($item->gradetype == GRADE_TYPE_SCALE) {
             $scale = $DB->get_record('scale', array('id' => $item->scaleid));
             $scale_items = null;

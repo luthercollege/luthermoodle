@@ -13,10 +13,27 @@ $PAGE->set_url($url);
 /// Reset user back to their real self if needed, for security reasons you need to log out and log in again
 if (session_is_loggedinas()) {
     require_sesskey();
-    require_logout();
+    $SESSION->load_navigation_admin = true;
+    $USER = get_complete_user_data('id', $_SESSION['USER']->realuser);
+    load_all_capabilities();   // load all this user's normal capabilities
 
-    // We can not set wanted URL here because the session is closed.
-    redirect(new moodle_url($url, array('redirect'=>1)));
+    if (isset($SESSION->oldcurrentgroup)) {      // Restore previous "current group" cache.
+        $SESSION->currentgroup = $SESSION->oldcurrentgroup;
+        unset($SESSION->oldcurrentgroup);
+    }
+    if (isset($SESSION->oldtimeaccess)) {        // Restore previous timeaccess settings
+        $USER->timeaccess = $SESSION->oldtimeaccess;
+        unset($SESSION->oldtimeaccess);
+    }
+    if (isset($SESSION->grade_last_report)) {    // Restore grade defaults if any
+        $USER->grade_last_report = $SESSION->grade_last_report;
+        unset($SESSION->grade_last_report);
+    }
+	if (isset($_SERVER["HTTP_REFERER"])) { // That's all we wanted to do, so let's go back
+		redirect($_SERVER["HTTP_REFERER"]);
+	} else {
+		redirect($CFG->wwwroot);
+	}
 }
 
 if ($redirect) {
@@ -25,8 +42,6 @@ if ($redirect) {
     } else {
         $SESSION->wantsurl = "$CFG->wwwroot/";
     }
-
-    redirect(get_login_url());
 }
 
 ///-------------------------------------
@@ -71,8 +86,10 @@ add_to_log($course->id, "course", "loginas", "../user/view.php?id=$course->id&am
 
 $strloginas    = get_string('loginas');
 $strloggedinas = get_string('loggedinas', '', $newfullname);
-
-$PAGE->set_title($strloggedinas);
-$PAGE->set_heading($course->fullname);
-$PAGE->navbar->add($strloggedinas);
 notice($strloggedinas, "$CFG->wwwroot/course/view.php?id=$course->id");
+
+if (isset($_SERVER["HTTP_REFERER"])) { // That's all we wanted to do, so let's go back
+    redirect($_SERVER["HTTP_REFERER"]);
+} else {
+    redirect($CFG->wwwroot);
+}
