@@ -478,14 +478,15 @@ class grade_report_user extends grade_report {
 //        						}
     		       			}
 		               	} else { // calculate up the weighted percentage for the course item
-		               	    $weight_normalizer = 1 / array_sum($parents[$eid]->agg_coef); // adjust all weights in a container so their sum equals 100
-		               	    $weighted_percentage = 0;
-		               	    foreach ($parents[$eid]->pctg as $key=>$pctg) {
-		               	        // the previously calculated percentage (which might already be weighted) times the normalizer * the weight
-		               	        if ($pctg !== null) {
-		               	            $weighted_percentage += $pctg*$weight_normalizer*$parents[$eid]->agg_coef[$key];
-		               	        }
-		               	    }
+	               	        $weight_normalizer = 0;
+	               	        $weighted_percentage = 0;
+	               	        foreach ($this->gtree->parents[$eid]->pctg as $key=>$pctg) {
+	               	            // the previously calculated percentage (which might already be weighted) times the normalizer * the weight
+	               	            $weighted_percentage += $pctg*$this->gtree->parents[$eid]->agg_coef[$key];
+	               	            $weight_normalizer += $this->gtree->parents[$eid]->agg_coef[$key];
+	               	        }
+	               	        $weight_normalizer = 1 / $weight_normalizer;
+	               	        $weighted_percentage *= $weight_normalizer;
 		               	    $parents[$eid]->coursepctg = $weighted_percentage;
 
 		               	}
