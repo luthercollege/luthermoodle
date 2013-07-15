@@ -26,6 +26,7 @@
 $string['addcourses'] = 'Add selected course link(s)';
 $string['alreadycourses'] = 'Courses already assigned';
 $string['assigncourses'] = 'Assign courses';
+$string['courses'] = 'Courses';
 $string['linkedcourse'] = 'Link course';
 $string['meta:config'] = 'Configure meta enrol instances';
 $string['meta:selectaslinked'] = 'Select course as meta linked';
@@ -37,6 +38,7 @@ $string['pluginname_desc'] = 'Course meta link enrolment plugin synchronises enr
 $string['potentialcourses'] = 'Courses available';
 $string['removecourse'] = 'Remove selected course link(s)';
 $string['search']        = 'Search courses';
+$string['searchresults'] = 'Search results';
 $string['syncall'] = 'Synchronise all enrolled users';
 $string['syncall_desc'] = 'If enabled all enrolled users are synchronised even if they have no role in parent course, if disabled only users that have at least one synchronised role are enrolled in child course.';
 $string['toomanytoshow'] = 'There are too many courses to show';

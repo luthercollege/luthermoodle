@@ -1,4 +1,4 @@
-<?php //  $Id$
+<?php
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -25,9 +25,9 @@
  */
 
 require('../../config.php');
-require_once("$CFG->dirroot/course/lib.php");
+require_once("$CFG->dirroot/group/lib.php");
 require_once("$CFG->dirroot/enrol/meta/locallib.php");
-
+require_once("$CFG->dirroot/course/lib.php");
 
 define("MAX_COURSES_PER_PAGE", 1000);
 global $DB, $PAGE, $OUTPUT, $COURSE;
@@ -45,22 +45,21 @@ if (! $site = get_site()) {
 }
 
 $course = $DB->get_record('course', array('id'=>$id), '*', MUST_EXIST);
-$context = get_context_instance(CONTEXT_COURSE, $course->id, MUST_EXIST);
+$context = context_course::instance($course->id, MUST_EXIST);
 
 $PAGE->set_url('/enrol/meta/addinstance.php', array('id'=>$course->id));
 $PAGE->set_pagelayout('admin');
 
 navigation_node::override_active_url(new moodle_url('/enrol/instances.php', array('id'=>$course->id)));
 
-
-require_login($course->id);
+require_login($course);
 require_capability('moodle/course:enrolconfig', $context);
 $enrol = enrol_get_plugin('meta');
 
-$strassigncourses = get_string('assigncourses', 'enrol_meta');
-$strsearch        = get_string("search", 'enrol_meta');
 $strsearchresults  = get_string("searchresults", 'enrol_meta');
 $strcourses   = get_string("courses", 'enrol_meta');
+$strassigncourses = get_string('assigncourses', 'enrol_meta');
+$strsearch        = get_string("search", 'enrol_meta');
 $stralreadycourses = get_string('alreadycourses', 'enrol_meta');
 $strpotentialcourses = get_string('potentialcourses', 'enrol_meta');
 $straddcourses = get_string('addcourses', 'enrol_meta');
@@ -80,12 +79,35 @@ if (!$frm = data_submitted()) {
         foreach ($frm->addselect as $addcourse) {
             $eid = $enrol->add_instance($COURSE, array('customint1'=>$addcourse));
             enrol_meta_sync($COURSE->id);
+            $newgroup = new stdClass();
+            $newgroup->courseid = $COURSE->id;
+            $newgroup->name     =  $DB->get_field('course', 'fullname', array('id'=>$addcourse));
+            $newcontext = get_context_instance(CONTEXT_COURSE, $addcourse, MUST_EXIST);
+            $groupid = groups_create_group($newgroup);
+            $members = get_enrolled_users($newcontext);
+            foreach($members as $member) {
+                groups_add_member($groupid, $member->id);
+            }
         }
     } else if ($remove and !empty($frm->removeselect) and confirm_sesskey()) {
         foreach ($frm->removeselect as $removecourse) {
+            // Delete enrollment instance
             $select = "courseid = $COURSE->id AND customint1 = $removecourse";
             $enroltodelete = $DB->get_record_select('enrol', $select);
             $eid = $enrol->delete_instance($enroltodelete);
+            // Delete group for this child
+            $delgroup = new stdClass();
+            $delgroup->name     =  $DB->get_field('course', 'fullname', array('id'=>$removecourse));
+            $delgroup->id = false;
+            $delgroup->id = $DB->get_field('groups', id, array('courseid' => $COURSE->id, 'name' => $delgroup->name));
+            if ($delgroup->id) {
+                groups_delete_group($delgroup->id);
+            }
+            // Delete grouping for this child
+            $delgrouping->id = $DB->get_field('groupings', id, array('courseid' => $COURSE->id, 'name' => $delgroup->name));
+            if ($delgrouping->id) {
+                groups_delete_grouping($delgrouping->id);
+            }
         }
 
     } else if ($showall and confirm_sesskey()) {
@@ -130,6 +152,7 @@ if (($searchtext != '') and $previoussearch and confirm_sesskey()) {
 // If no search results then get potential students for this course excluding users already in course
 if (empty($searchcourses)) {
     $courses = get_courses('all', null, 'c.id, c.fullname, c.visible, c.shortname');
+    $coursenames = array();
     foreach ($alreadycourses as $key=>$acourse) {
         unset($courses[$key]);
     }
@@ -147,6 +170,7 @@ if (empty($searchcourses)) {
             unset($courses[$c->id]);
             continue;
         }
+        $coursenames[$c->id] = $c->fullname;
     }
     $numcourses = sizeof($courses);
 }
@@ -155,7 +179,6 @@ if (empty($searchcourses)) {
 
 $PAGE->set_heading($course->fullname);
 $PAGE->set_title(get_string('pluginname', 'enrol_meta'));
-
 
 echo $OUTPUT->header();
 
@@ -194,7 +217,7 @@ if ($numcourses > MAX_COURSES_PER_PAGE) {
     echo html_writer::select($searchcourses, 'addselect[]', '', false, array('size' => 20, 'multiple' => 'multiple'));
 } elseif (! empty($courses)) {
     echo html_writer::label($strpotentialcourses, 'menucourse');
-    echo html_writer::select($courses, 'addselect[]', '', false, array('size' => 20, 'multiple' => 'multiple'));
+    echo html_writer::select($coursenames, 'addselect[]', '', false, array('size' => 20, 'multiple' => 'multiple'));
 }
 echo html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()));
 echo html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'id', 'value' => $id));
