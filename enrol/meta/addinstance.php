@@ -52,6 +52,7 @@ navigation_node::override_active_url(new moodle_url('/enrol/instances.php', arra
 
 require_login($course);
 require_capability('moodle/course:enrolconfig', $context);
+$enrol = enrol_get_plugin('meta');
 
 $strassigncourses = get_string('assigncourses', 'enrol_meta');
 $strsearch        = get_string("search", 'enrol_meta');
