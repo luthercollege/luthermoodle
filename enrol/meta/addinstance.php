@@ -32,7 +32,7 @@ require_once("$CFG->dirroot/course/lib.php");
 define("MAX_COURSES_PER_PAGE", 1000);
 global $DB, $PAGE, $OUTPUT, $COURSE;
 
-$id             = required_param('id',PARAM_INT); // course id
+$id             = required_param('id', PARAM_INT); // course id
 $add            = optional_param('add', 0, PARAM_BOOL);
 $remove         = optional_param('remove', 0, PARAM_BOOL);
 $showall        = optional_param('showall', 0, PARAM_BOOL);
@@ -70,10 +70,7 @@ $strtomanytoshow = get_string('toomanytoshow', 'enrol_meta');
 if (!$frm = data_submitted()) {
     $note = 'Use this form to add courses to your meta course (this will import the enrolments)';
     $OUTPUT->box($note);
-
-/// A form was submitted so process the input
-
-} else {
+} else { // A form was submitted so process the input
     if ($add and !empty($frm->addselect) and confirm_sesskey()) {
         $timestart = $timeend = 0;
         foreach ($frm->addselect as $addcourse) {
@@ -85,7 +82,7 @@ if (!$frm = data_submitted()) {
             $newcontext = get_context_instance(CONTEXT_COURSE, $addcourse, MUST_EXIST);
             $groupid = groups_create_group($newgroup);
             $members = get_enrolled_users($newcontext);
-            foreach($members as $member) {
+            foreach ($members as $member) {
                 groups_add_member($groupid, $member->id);
             }
         }
@@ -99,12 +96,12 @@ if (!$frm = data_submitted()) {
             $delgroup = new stdClass();
             $delgroup->name     =  $DB->get_field('course', 'fullname', array('id'=>$removecourse));
             $delgroup->id = false;
-            $delgroup->id = $DB->get_field('groups', id, array('courseid' => $COURSE->id, 'name' => $delgroup->name));
+            $delgroup->id = $DB->get_field('groups', 'id', array('courseid' => $COURSE->id, 'name' => $delgroup->name));
             if ($delgroup->id) {
                 groups_delete_group($delgroup->id);
             }
             // Delete grouping for this child
-            $delgrouping->id = $DB->get_field('groupings', id, array('courseid' => $COURSE->id, 'name' => $delgroup->name));
+            $delgrouping->id = $DB->get_field('groupings', 'id', array('courseid' => $COURSE->id, 'name' => $delgroup->name));
             if ($delgrouping->id) {
                 groups_delete_grouping($delgrouping->id);
             }
@@ -117,12 +114,12 @@ if (!$frm = data_submitted()) {
 }
 
 
-/// Get all existing students and teachers for this course.
-if(! $alreadycourses = $DB->get_records('enrol', array('courseid'=>$course->id, 'enrol'=>'meta'),
-        'sortorder,courseid','customint1, courseid, enrol, id')) {
+// Get all existing students and teachers for this course.
+if (! $alreadycourses = $DB->get_records('enrol', array('courseid'=>$course->id, 'enrol'=>'meta'),
+        'sortorder,courseid', 'customint1, courseid, enrol, id')) {
     $alreadycourses = array();
 } else {
-    foreach ($alreadycourses as $key=>$acourse) {
+    foreach ($alreadycourses as $key => $acourse) {
         $alreadycourses[$key] = $DB->get_field('course', 'fullname', array('id'=>$key));
     }
 }
@@ -131,18 +128,17 @@ $numcourses = 0;
 $searchcourses = array();
 // Get search results excluding any users already in this course
 if (($searchtext != '') and $previoussearch and confirm_sesskey()) {
-    if ($searchcourses = get_courses_search(explode(" ",$searchtext),'fullname ASC',0,99999,$numcourses)) {
+    if ($searchcourses = get_courses_search(explode(" ", $searchtext), 'fullname ASC', 0, 99999, $numcourses)) {
         foreach ($searchcourses as $tmp) {
-            if (array_key_exists($tmp->id,$alreadycourses)) {
+            if (array_key_exists($tmp->id, $alreadycourses)) {
                 unset($searchcourses[$tmp->id]);
-//          } elseif (!empty($tmp->metacourse)) {
-            } elseif ($ismeta = $DB->get_records('enrol',array('courseid' => $tmp->id, 'enrol' => 'meta'))) { // don't allow courses that already have meta enrollments
+            } else if ($ismeta = $DB->get_records('enrol', array('courseid' => $tmp->id, 'enrol' => 'meta'))) { // don't allow courses that already have meta enrollments
                 unset($searchcourses[$tmp->id]);
             } else {
                 $searchcourses[$tmp->id] = $tmp->fullname;
             }
         }
-        if (array_key_exists($course->id,$searchcourses)) {
+        if (array_key_exists($course->id, $searchcourses)) {
             unset($searchcourses[$course->id]);
         }
         $numcourses = count($searchcourses);
@@ -153,7 +149,7 @@ if (($searchtext != '') and $previoussearch and confirm_sesskey()) {
 if (empty($searchcourses)) {
     $courses = get_courses('all', null, 'c.id, c.fullname, c.visible, c.shortname');
     $coursenames = array();
-    foreach ($alreadycourses as $key=>$acourse) {
+    foreach ($alreadycourses as $key => $acourse) {
         unset($courses[$key]);
     }
     foreach ($courses as $c) {
@@ -172,7 +168,7 @@ if (empty($searchcourses)) {
         }
         $coursenames[$c->id] = $c->fullname;
     }
-    $numcourses = sizeof($courses);
+    $numcourses = count($courses);
 }
 
 
@@ -212,10 +208,10 @@ if ($numcourses > MAX_COURSES_PER_PAGE) {
     echo html_writer::label($strtomanytoshow, 'menucourse');
     echo html_writer::empty_tag('br');
     echo html_writer::select(array(), 'nothing', '', false, array('size' => 20, 'multiple' => 'multiple'));
-} elseif (! empty($searchcourses)) {
+} else if (! empty($searchcourses)) {
     echo html_writer::label($strpotentialcourses, 'menucourse');
     echo html_writer::select($searchcourses, 'addselect[]', '', false, array('size' => 20, 'multiple' => 'multiple'));
-} elseif (! empty($courses)) {
+} else if (! empty($courses)) {
     echo html_writer::label($strpotentialcourses, 'menucourse');
     echo html_writer::select($coursenames, 'addselect[]', '', false, array('size' => 20, 'multiple' => 'multiple'));
 }
@@ -237,4 +233,3 @@ echo html_writer::end_tag('table');
 echo $OUTPUT->box_end();
 echo $OUTPUT->footer();
 die();
-?>
