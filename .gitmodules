@@ -7,3 +7,6 @@
 [submodule "blocks/quickset"]
 	path = blocks/quickset
 	url = /opt/local/apache2/htdocs/quickset
+[submodule "theme/shoelace"]
+	path = theme/shoelace
+	url = /opt/local/apache2/htdocs/shoelace
