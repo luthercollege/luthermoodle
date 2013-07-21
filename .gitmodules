@@ -10,3 +10,6 @@
 [submodule "theme/essential"]
 	path = theme/essential
 	url = /opt/local/apache2/htdocs/essential
+[submodule "mod/questionnaire"]
+	path = mod/questionnaire
+	url = /opt/local/apache2/htdocs/questionnaire
