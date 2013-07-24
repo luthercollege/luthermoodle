@@ -7,9 +7,9 @@
 [submodule "theme/shoelace"]
 	path = theme/shoelace
 	url = /opt/local/apache2/htdocs/shoelace
-[submodule "theme/essential"]
-	path = theme/essential
-	url = /opt/local/apache2/htdocs/essential
 [submodule "mod/questionnaire"]
 	path = mod/questionnaire
 	url = /opt/local/apache2/htdocs/questionnaire
+[submodule "theme/essential"]
+	path = theme/essential
+	url = /opt/local/apache2/htdocs/essential
