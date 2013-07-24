@@ -13,3 +13,6 @@
 [submodule "theme/essential"]
 	path = theme/essential
 	url = /opt/local/apache2/htdocs/essential
+[submodule "local/profileswitches"]
+	path = local/profileswitches
+	url = /opt/local/apache2/htdocs/profileswitches
