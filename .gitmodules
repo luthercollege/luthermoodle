@@ -16,3 +16,6 @@
 [submodule "local/profileswitches"]
 	path = local/profileswitches
 	url = /opt/local/apache2/htdocs/profileswitches
+[submodule "local/loginas"]
+	path = local/loginas
+	url = /opt/local/apache2/htdocs/loginas
