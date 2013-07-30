@@ -19,3 +19,6 @@
 [submodule "local/loginas"]
 	path = local/loginas
 	url = /opt/local/apache2/htdocs/loginas
+[submodule "blocks/sharing_cart"]
+	path = blocks/sharing_cart
+	url = /opt/local/apache2/htdocs/sharing_cart
