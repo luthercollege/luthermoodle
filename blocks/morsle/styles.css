@@ -1,0 +1,52 @@
+.block_morsle table {
+background-color: #e3e9ff;
+}
+
+.block_morsle table.morslefull {
+	align: center;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.block_morsle td {
+	margin: 0px;
+	padding: 0px;
+}
+.block_morsle td.morslefiles {
+	padding-left: 8px;
+}
+
+.block_morsle td.morslebottom {
+	padding-bottom: 5px;
+}
+
+.block_morsle td.morsletop {
+	padding-top: 5px;
+}
+
+.block_morsle td.calendar {
+	padding-left: 0px;
+	padding-right: 0px;
+	padding-top: 0px;
+	padding-bottom: 0px;
+}
+
+.block_morsle .logo {
+	width: 180px;
+	padding-top: 5px;
+	align: center;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.block_morsle form {
+	display: inline;
+}
+
+.block_morsle .button {
+	background-color:#ffaa00;
+	font-size: .9em;
+	align: left;
+	cursor:pointer;
+	cursor:hand;
+}
