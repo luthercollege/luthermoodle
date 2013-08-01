@@ -22,3 +22,21 @@
 [submodule "blocks/sharing_cart"]
 	path = blocks/sharing_cart
 	url = /opt/local/apache2/htdocs/sharing_cart
+[submodule "course/format/grid"]
+	path = course/format/grid
+	url = /opt/local/apache2/htdocs/grid
+[submodule "mod/journal"]
+	path = mod/journal
+	url = /opt/local/apache2/htdocs/journal
+[submodule "report/customsql"]
+	path = report/customsql
+	url = /opt/local/apache2/htdocs/customsql
+[submodule "report/editdates"]
+	path = report/editdates
+	url = /opt/local/apache2/htdocs/editdates
+[submodule "report/roster"]
+	path = report/roster
+	url = /opt/local/apache2/htdocs/roster
+[submodule "question/type/regex"]
+	path = question/type/regex
+	url = /opt/local/apache2/htdocs/regexp

@@ -172,6 +172,9 @@ class tinymce_texteditor extends texteditor {
             'langrev' => $langrev,
         );
 
+        // add in preformated button for code
+        $params['plugins'] .= ',pre';
+
         // Should we override the default toolbar layout unconditionally?
         if (!empty($config->customtoolbar) and $customtoolbar = self::parse_toolbar_setting($config->customtoolbar)) {
             $i = 1;
