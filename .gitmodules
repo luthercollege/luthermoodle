@@ -37,6 +37,12 @@
 [submodule "report/roster"]
 	path = report/roster
 	url = /opt/local/apache2/htdocs/roster
-[submodule "question/type/regex"]
-	path = question/type/regex
+[submodule "question/behaviour/regexpadaptivewithhelpnopenalty"]
+	path = question/behaviour/regexpadaptivewithhelpnopenalty
+	url = /opt/local/apache2/htdocs/regexpadaptivewithhelpnopenalty
+[submodule "question/behaviour/regexpadaptivewithhelp"]
+	path = question/behaviour/regexpadaptivewithhelp
+	url = /opt/local/apache2/htdocs/regexpadaptivewithhelp
+[submodule "question/type/regexp"]
+	path = question/type/regexp
 	url = /opt/local/apache2/htdocs/regexp
