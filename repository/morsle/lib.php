@@ -867,7 +867,7 @@ class repository_morsle extends repository {
 		$sql = 'SELECT m.*, c.visible as visible, c.category as category from ' . $CFG->prefix . 'morsle_active m
 			JOIN ' . $CFG->prefix . 'course c on m.courseid = c.id
 			WHERE m.status NOT IN(' . $this->disregard . ')
-			AND c.id = 1171
+			AND c.id = 2549
 			AND c.startdate + ' . $this->expires . ' > ' . $this->curtime;
 		$chewon = $DB->get_records_sql($sql);
 		$random = rand(0,9);
@@ -1014,6 +1014,10 @@ class repository_morsle extends repository {
 				$batchpermpost .= batchdocpermpost($member, $permission, 'add', $this->base_feed);
 			}
 
+			if (count($deleted) + count($added) == 0) {
+			    return true;
+			}
+
 			// delete
 			foreach($deleted as $member=>$permission) {
 				$batchpermpost .= batchdocpermpost($member, $permission, 'delete', $this->base_feed);
@@ -1040,8 +1044,8 @@ class repository_morsle extends repository {
 			foreach ($added as $member=>$permission) {
 				if ($permission == 'writer') {
 					echo $this->docs_feed . $folderid . $member;
-					$this->link_to_drive($member, $this->term, $this->docs_feed, $folderid);
-//					add_file_tocollection($this->docs_feed, 'folder%3Aroot', $folderid, $member);
+//					$this->link_to_drive($member, $this->term, $this->docs_feed, $folderid);
+					add_file_tocollection($this->docs_feed, 'folder%3Aroot', $folderid, $member);
 				}
 			}
 
