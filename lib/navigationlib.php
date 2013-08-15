@@ -3683,6 +3683,12 @@ class settings_navigation extends navigation_node {
 
         }
 
+        // added in for streaming video request
+        if (has_capability('moodle/course:update', $coursecontext)) {
+            $url = 'https://docs.google.com/a/luther.edu/spreadsheet/viewform?formkey=dG53S2Rrei1wNmFQenBaeHFoSzdDZ0E6MQ#gid=0';
+            $coursenode->add('Streaming Video Request', $url, self::TYPE_SETTING, null, null, new pix_icon('f/flash', ''));
+        }
+
         // Switch roles
         $roles = array();
         $assumedrole = $this->in_alternative_role();
