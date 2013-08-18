@@ -2354,7 +2354,7 @@ function print_grade_menu($courseid, $name, $current, $includenograde=true, $ret
     if ($includenograde) {
         $grades[0] = get_string('nograde');
     }
-    for ($i=100; $i>=1; $i--) {
+    for ($i=250; $i>=1; $i--) {
         $grades[$i] = $i;
     }
     $output .= html_writer::select($grades, $name, $current, false);
