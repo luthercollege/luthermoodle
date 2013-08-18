@@ -41,7 +41,7 @@ if($showadvanced!=-1) {
     $url->param("showadvanced",$showadvanced);
 }
 $PAGE->set_url($url);
-$PAGE->set_pagelayout('admin');
+$PAGE->set_pagelayout('print');
 
 /// Make sure they can even access this course
 if (!$course = $DB->get_record('course', array('id' => $courseid))) {
@@ -81,13 +81,15 @@ if (has_capability('moodle/grade:manage', $context)) {
     $options = $gpr->get_options();
     $options['sesskey'] = sesskey();
 
-    if ($USER->gradeediting[$course->id]) {
+//    if ($USER->gradeediting[$course->id]) {
         $options['showadvanced'] = 0;
         $current_view = 'fullview';
+/*
     } else {
         $options['showadvanced'] = 1;
         $current_view = 'simpleview';
     }
+*/
 
 } else {
     $USER->gradeediting[$course->id] = 0;
@@ -334,7 +336,7 @@ if ($data = data_submitted() and confirm_sesskey()) {
     }
 }
 
-print_grade_page_head($courseid, 'edittree', $current_view, get_string('categoriesedit', 'grades') . ': ' . $current_view_str);
+print_grade_page_head($courseid, 'print', $current_view, get_string('categoriesedit', 'grades') . ': ' . $current_view_str);
 
 // Print Table of categories and items
 echo $OUTPUT->box_start('gradetreebox generalbox');
