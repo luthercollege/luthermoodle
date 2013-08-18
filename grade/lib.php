@@ -762,7 +762,8 @@ function print_grade_page_head($courseid, $active_type, $active_plugin=null,
 
     // Determine the string of the active plugin
     $stractive_plugin = ($active_plugin) ? $plugin_info['strings']['active_plugin_str'] : $heading;
-    $stractive_type = $plugin_info['strings'][$active_type];
+    $stractive_type = 'Print'; // easiest way to accomplish this with fewest kittens killed or maimed
+//    $stractive_type = $plugin_info['strings'][$active_type]; //
 
     if (empty($plugin_info[$active_type]->id) || !empty($plugin_info[$active_type]->parent)) {
         $title = $PAGE->course->fullname.': ' . $stractive_type . ': ' . $stractive_plugin;
@@ -772,6 +773,8 @@ function print_grade_page_head($courseid, $active_type, $active_plugin=null,
 
     if ($active_type == 'report') {
         $PAGE->set_pagelayout('report');
+    } else if ($active_type == 'print') { // hack to get a wide report
+        $PAGE->set_pagelayout('print'); // ennd of hack
     } else {
         $PAGE->set_pagelayout('admin');
     }
