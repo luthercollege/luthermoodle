@@ -204,7 +204,7 @@ class grade_report_user extends grade_report {
         if ($this->accuratetotals) { // don't even go to fill_parents unless accuratetotals is set
             $this->gtree->fill_cats($this->gtree);
     		$this->gtree->parents[$this->gtree->top_element['object']->grade_item->id] = new stdClass(); // initiate the course item
-            $this->gtree->fill_parents($this->gtree->top_element, $this->gtree->top_element['object']->grade_item->id, $showtotalsifcontainhidden);
+            $this->gtree->fill_parents($this->gtree->top_element, $this->gtree->top_element['object']->grade_item->id, $this->showtotalsifcontainhidden);
         }
         // Determine the number of rows and indentation
         $this->maxdepth = 1;
@@ -438,35 +438,48 @@ class grade_report_user extends grade_report {
                 // our only qualifier is if accuratepoints are requested
                 // we don't attempt to determine at this time what different grade display types are actually being shown
                 if ($this->accuratetotals) {
-					$items = $this->gtree->items;
+
+                    // substituting shorthand for long object variables
+                    $items = $this->gtree->items;
 					$parents = $this->gtree->parents;
+
 					if ($grade_grade->is_hidden()) { // never aggregate hidden categories into their parents
                 		// do nothing
                 	} elseif ($type == 'item') { // items
-                        $parent_id = $parents[$eid]->id; // the parent record contains an id field pointing to its parent, the key on the parent record is the item itself to allow lookup
-                	    if ($gradeval !== null && isset($parents[$eid])) {
-                			$parents[$parent_id]->cat_item[$eid] = $gradeval;
-                			$parents[$parent_id]->agg_coef[$eid] = $parents[$eid]->agg == GRADE_AGGREGATE_WEIGHTED_MEAN ?
-                			    $grade_object->aggregationcoef :
-                			    $grade_grade->grade_item->grademax; // if we're using WM store aggcoef, otherwise store grade_max (natural weight)
+                        $parent_id = $parents[$eid]->parent_id; // the parent record contains an id field pointing to its parent, the key on the parent record is the item itself to allow lookup
+                	    if (($gradeval !== null || $USER->id == $this->user->id) && isset($parents[$eid])) {
+                            // create an array under the parents[$parentid] object containing the values for this item
+                	        $parents[$parent_id]->cat_item[$eid] = $gradeval;
+                			$parents[$parent_id]->agg_coef[$eid] = $parents[$eid]->parent_agg == GRADE_AGGREGATE_WEIGHTED_MEAN ?
+                    			    $grade_object->aggregationcoef :
+                    			    $grade_grade->grade_item->grademax; // if we're using WM store aggcoef, otherwise store grade_max (natural weight)
 							$parents[$parent_id]->cat_max[$eid] = $grade_grade->grade_item->grademax;
 							$parents[$parent_id]->pctg[$eid] = $gradeval / $grade_grade->grade_item->grademax;
 	              		} else {
 	              		    $parents[$parent_id]->pctg[$eid] = null;
 	              		}
                 	} else { // categoryitems or courseitems
-						// set up variables that are used in this inserted limit_rules scrap
+
+                	    // set up variables that are used in this inserted limit_rules scrap
 						if (isset($parents[$eid]->cat_item)) { // if category or course has marked grades in it
     	               		$grade_values = $parents[$eid]->cat_item; // earned points
     	               		$grade_maxes = $parents[$eid]->cat_max; // range of earnable points for marked items
 						}
+
 						if ($type == 'categoryitem') {
-                            $parent_id = $parents[$eid]->id; // the parent record contains an id field pointing to its parent, the key on the parent record is the item itself to allow lookup
+                            $parent_id = $parents[$eid]->parent_id; // the parent record contains an id field pointing to its parent, the key on the parent record is the item itself to allow lookup
 						    $this_cat = $this->gtree->items[$eid]->get_item_category(); // need category settings like drop-low or keep-high
     		               	$this->gtree->limit_item($this_cat,$items,$grade_values,$grade_maxes); // TODO: test this with some drop-low conditions to see if we can still ascertain the weighted grade
-    		               	$parents[$parent_id]->agg_coef[$eid] = $grade_object->aggregationcoef; // store this regardless of parent aggtype
+
+                            // create an array under the parents[$parentid] object containing the values for this category
+    		               	if ($parents[$eid]->parent_agg == GRADE_AGGREGATE_WEIGHTED_MEAN2) {
+    							$parents[$parent_id]->agg_coef[$eid] = array_sum($grade_maxes); // range of earnable points
+    		               	} else {
+    							$parents[$parent_id]->agg_coef[$eid] = $grade_object->aggregationcoef; // store this regardless of parent aggtype
+    		               	}
 
     		               	if (isset($grade_values)) {
+                           	    // continue adding to the array under the parent object
         		               	$parents[$parent_id]->cat_item[$eid] = array_sum($grade_values); // earned points
     						// if we have a point value or if viewing an empty report
 //    		       			if (isset($gradeval) || $this->user->id == $USER->id) {
@@ -474,8 +487,8 @@ class grade_report_user extends grade_report {
     		       			// determine the weighted grade if necessary
     		       			// we're checking the aggtype stored by the children
         		       			$keys = array_keys($grade_values);
-//        						if ($parents[$keys[0]]->agg == GRADE_AGGREGATE_WEIGHTED_MEAN) { // needed just to get the id for one of the children to check the parent's agg type
-        							$weight_normalizer = 1 / array_sum($parents[$eid]->agg_coef); // adjust all weights in a container so their sum equals 100
+//        						if ($parents[$keys[0]]->parent_agg == GRADE_AGGREGATE_WEIGHTED_MEAN) { // needed just to get the id for one of the children to check the parent's agg type
+        							$weight_normalizer = 1 / max(1,array_sum($parents[$eid]->agg_coef)); // adjust all weights in a container so their sum equals 100
         							$weighted_percentage = 0;
         							foreach ($parents[$eid]->pctg as $key=>$pctg) {
         								// the previously calculated percentage (which might already be weighted) times the normalizer * the weight
@@ -486,13 +499,18 @@ class grade_report_user extends grade_report {
 //        							$parents[$parent_id]->pctg[$eid] = $gradeval / $grade_grade->grade_item->grademax;
 //        						}
     		       			}
-		               	} else { // calculate up the weighted percentage for the course item
+		               	} else if (!isset($parents[$eid]->agg_coef)) {
+		               	    $parents[$eid]->coursepctg = 1;
+                	    } else { // calculate up the weighted percentage for the course item
 	               	        $weight_normalizer = 0;
 	               	        $weighted_percentage = 0;
-	               	        foreach ($this->gtree->parents[$eid]->pctg as $key=>$pctg) {
+	               	        foreach ($parents[$eid]->agg_coef as $key=>$value) {
+//	               	        foreach ($this->gtree->parents[$eid]->pctg as $key=>$pctg) {
 	               	            // the previously calculated percentage (which might already be weighted) times the normalizer * the weight
-	               	            $weighted_percentage += $pctg*$this->gtree->parents[$eid]->agg_coef[$key];
-	               	            $weight_normalizer += $this->gtree->parents[$eid]->agg_coef[$key];
+	               	            $weight_normalizer += $value;
+                                if (isset($parents[$eid]->pctg)) {
+    	               	            $weighted_percentage += $parents[$eid]->pctg[$key]*$value;
+                                }
 	               	        }
 	               	        $weight_normalizer = 1 / $weight_normalizer;
 	               	        $weighted_percentage *= $weight_normalizer;
@@ -545,10 +563,9 @@ class grade_report_user extends grade_report {
                    	if ($this->accuratetotals && ($type == 'categoryitem' or $type == 'courseitem')) {
                    		$grade_grade->grade_item->grademax = isset($grade_maxes) ? array_sum($grade_maxes) : $grade_object->max_earnable;
                    	}
-                    $data['range']['content'] = $grade_grade->grade_item->get_formatted_range(GRADE_DISPLAY_TYPE_REAL);
-                    $grade_grade->grade_item->grademax = $tempmax;
                     $data['range']['class'] = $class;
                     $data['range']['content'] = $grade_grade->grade_item->get_formatted_range(GRADE_DISPLAY_TYPE_REAL, $this->rangedecimals);
+                    $grade_grade->grade_item->grademax = $tempmax;
                     $data['range']['headers'] = "$header_cat $header_row range";
                 }
 
@@ -566,7 +583,7 @@ class grade_report_user extends grade_report {
                             $gradeval = $type == 'categoryitem' ? $parents[$parent_id]->pctg[$eid] : $parents[$eid]->coursepctg;
 /*
                             $keys = array_keys($grade_values);
-                       	    if ($parents[$keys[0]]->agg == GRADE_AGGREGATE_WEIGHTED_MEAN) { // needed just to get the id for one of the children to check the parent's agg type
+                       	    if ($parents[$keys[0]]->parent_agg == GRADE_AGGREGATE_WEIGHTED_MEAN) { // needed just to get the id for one of the children to check the parent's agg type
                        	        $gradeval = array_sum($parents[$eid]->pctg);
     						} else {
                        	        $gradeval = array_sum($parents[$eid]->pctg)/count($parents[$eid]->pctg);
@@ -594,7 +611,8 @@ class grade_report_user extends grade_report {
                             $data['lettergrade']['content'] = '-';
                         } else {
                             $data['lettergrade']['content'] = grade_format_gradevalue($gradeval, $grade_grade->grade_item, true, GRADE_DISPLAY_TYPE_LETTER);
-                    } elseif (isset($gradeval)) {
+                        }
+                    } else if (isset($gradeval)) {
                         $data['lettergrade']['class'] = $class;
                     	$data['lettergrade']['content'] = grade_format_gradevalue($gradeval, $grade_grade->grade_item, true, GRADE_DISPLAY_TYPE_LETTER);
                         }
@@ -658,7 +676,6 @@ class grade_report_user extends grade_report {
                     }
                     $data['feedback']['headers'] = "$header_cat $header_row feedback";
                 }
-            }
         }
 
         /// Category
