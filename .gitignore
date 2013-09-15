@@ -34,3 +34,6 @@ composer.lock
 /behat.yml
 */yui/build/*/*-coverage.js
 /lib/yuilib/*/build/*/*-coverage.js
+course/courseimportinclude.php
+course/moodlecourseautoimport.csv
+course/courseimportauto.php
