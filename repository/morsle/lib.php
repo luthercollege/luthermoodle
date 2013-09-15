@@ -710,7 +710,7 @@ class repository_morsle extends repository {
 					$updaterec = $DB->update_record('morsle_active', $record);
 					$this->log($key . ' DELETED', $record->courseid, null, s($response->response));
 				} else {
-					$this->log($key . ' DELETE FAILED', $record->courseid, null, s($response->response));
+					$this->log($key . ' DELETE FAILED', $record->courseid, null, null);
 					return false;
 				}
 			}
@@ -867,8 +867,8 @@ class repository_morsle extends repository {
 		$sql = 'SELECT m.*, c.visible as visible, c.category as category from ' . $CFG->prefix . 'morsle_active m
 			JOIN ' . $CFG->prefix . 'course c on m.courseid = c.id
 			WHERE m.status NOT IN(' . $this->disregard . ')
-			AND c.id = 2549
 			AND c.startdate + ' . $this->expires . ' > ' . $this->curtime;
+//			AND c.id = 1171
 		$chewon = $DB->get_records_sql($sql);
 		$random = rand(0,9);
 		foreach ($chewon as $record) {
@@ -887,6 +887,7 @@ class repository_morsle extends repository {
 				$this->cal_acl_feed = "https://www.google.com/calendar/feeds/$this->urluser/acl/full/";
 				$this->term = $DB->get_field('course_categories', 'name', array('id' => $record->category));
 
+
 				// determine rosters for group members regardless of visibility of course
 				//    $rosters = get_roster($courseid, 1);
 
@@ -902,6 +903,7 @@ class repository_morsle extends repository {
 					$this->membersmaintain($allusers);
 				}
 
+
 				// now we need to substitute real email for alias because folders use real (groups use alias)
 				foreach ($rosters as $key=>$value) {
 					if (isset($this->aliases[$key])) {
@@ -911,12 +913,15 @@ class repository_morsle extends repository {
 				}
 
 				// Calendar permissions
+
 				if (!is_null($record->password)) {
 					$garray = array('editingteacher' => 'editor','teacher' => 'editor','student' => 'read','guest' => 'read');
 					$allusers = $rosters;
 					array_walk($allusers,'set_googlerole', $garray);
 					$calassigned = $this->set_calpermissions($allusers, $record);
+
 				}
+
 
 				// read-only folder permissions
 				if (!is_null($record->readfolderid)) {
@@ -962,7 +967,7 @@ class repository_morsle extends repository {
 			if ($success) {
 				$this->log("$member delete SUCCESS", $this->courseid, null, $permission . ':' . s($response->response));
 			} else {
-				$this->log("$member delete FAILED", $this->courseid, null, $permission . ':' . s($response->response));
+				$this->log("$member delete FAILED", $this->courseid, null, $permission . ':');
 			}
 		}
 
@@ -976,7 +981,7 @@ class repository_morsle extends repository {
 				if ($success) {
 					$this->log("$member add SUCCESS", $this->courseid, null, 'Member:' . s($response->response));
 				} else {
-					$this->log("$member ADD FAILED ", $this->courseid, null, 'Member:' . s($response->response));
+					$this->log("$member ADD FAILED ", $this->courseid, null, 'Member:');
 				}
 			}
 
@@ -986,7 +991,7 @@ class repository_morsle extends repository {
 			if ($success) {
 				$this->log("$member add SUCCESS", $this->courseid, null, $permission . ':' . s($response->response));
 			} else {
-				$this->log("$member ADD FAILED ", $this->courseid, null, $permission . ':' . s($response->response));
+				$this->log("$member ADD FAILED ", $this->courseid, null, $permission . ':');
 			}
 		}
 	}
@@ -1011,6 +1016,7 @@ class repository_morsle extends repository {
 
 			// add new members first in case we need an owner
 			foreach($added as $member=>$permission) {
+				echo $folderid . $member . ' added <br />\n';
 				$batchpermpost .= batchdocpermpost($member, $permission, 'add', $this->base_feed);
 			}
 
@@ -1020,6 +1026,7 @@ class repository_morsle extends repository {
 
 			// delete
 			foreach($deleted as $member=>$permission) {
+				echo $folderid . $member . ' deleted <br />\n';
 				$batchpermpost .= batchdocpermpost($member, $permission, 'delete', $this->base_feed);
 			}
 
@@ -1043,7 +1050,6 @@ class repository_morsle extends repository {
 			// link the folder to the user's DRIVE folder
 			foreach ($added as $member=>$permission) {
 				if ($permission == 'writer') {
-					echo $this->docs_feed . $folderid . $member;
 //					$this->link_to_drive($member, $this->term, $this->docs_feed, $folderid);
 					add_file_tocollection($this->docs_feed, 'folder%3Aroot', $folderid, $member);
 				}
@@ -1095,7 +1101,7 @@ class repository_morsle extends repository {
 
 			// don't process the group acl or the course owner acl
 			unset($gmembers[$this->user]);
-			unset($gmembers[$this->group]);
+//			unset($gmembers[$this->group]);
 
 			$deleted = array_diff_assoc($gmembers, $members);
 			$added =  array_diff_assoc($members, $gmembers);
@@ -1105,18 +1111,18 @@ class repository_morsle extends repository {
 				$delete_base_feed = $this->base_feed . '/user%3A' . $member;
 				$response = twolegged($delete_base_feed, $this->params, 'DELETE', null, '1.4');
 				if ($response->info['http_code'] == 200) {
-					$this->log("$member Deleted $this->sitename", $this->courseid, null, $this->sitename . ':');
+					$this->log("$member Deleted $this->sitename", $this->courseid, null, $this->sitename . ':' . s($response->response));
 				} else {
-					$this->log("DELETE FAILED $member $this->sitename", $this->courseid, null, $this->sitename . ':' . s($response->response));
+					$this->log("DELETE FAILED $member $this->sitename", $this->courseid, null, $this->sitename . ':');
 				}
 			}
 			foreach($added as $member=>$permission) {
 				$siteacldata = acl_post($member, $permission, 'user');
 				$response = twolegged($this->base_feed, $this->params, 'POST', $siteacldata, '1.4');
 				if ($response->info['http_code'] == 201) {
-					$this->log("$member added $this->sitename", $this->courseid, null, $this->sitename . ':');
+					$this->log("$member added $this->sitename", $this->courseid, null, $this->sitename . ':' . s($response->response));
 				} else {
-					$this->log("ADD FAILED $member $this->sitename", $this->courseid, null, $this->sitename . ':' . s($response->response));
+					$this->log("ADD FAILED $member $this->sitename", $this->courseid, null, $this->sitename . ':');
 				}
 			}
 			return true;
@@ -1160,6 +1166,7 @@ class repository_morsle extends repository {
 			unset($gmembers[$this->domain]);
 			unset($gmembers[$username]);
 
+
 			$deleted = array_diff_assoc($gmembers, $members);
 			$added =  array_diff_assoc($members, $gmembers);
 
@@ -1171,7 +1178,7 @@ class repository_morsle extends repository {
 				if ($success) {
 					$this->log("Deleted $member calendar", $this->courseid, null, $this->user . ':');
 				} else {
-					$this->log("DELETE FAILED $member calendar", $this->courseid, null,  $this->user . ':' . s($response->response));
+					$this->log("DELETE FAILED $member calendar", $this->courseid, null,  $this->user . ':');
 				}
 			}
 			// add new permissions
@@ -1181,7 +1188,7 @@ class repository_morsle extends repository {
 				if ($success) {
 					$this->log("Added $member calendar", $this->courseid, null,  $this->user . ':');
 				} else {
-					$this->log("ADD FAILED $member calendar", $this->courseid, null,  $this->user . ':' . s($response->response));
+					$this->log("ADD FAILED $member calendar", $this->courseid, null,  $this->user . ':');
 				}
 			}
 			return true;
@@ -1274,7 +1281,8 @@ class repository_morsle extends repository {
 		// can't used canned function as its likely to return a student role when the user has both a student and a teacher role
 		// so this bit will allow the lower roleid (higher value role) to overwrite the lower one
 		foreach ($roles as $role) {
-			if (($temp = get_role_users($role,$coursecontext)) !== false) {
+			$temp = get_role_users($role,$coursecontext);
+			if ($temp !== false && sizeof($temp) !== 0) {
 				$course->users = isset($course->users) ? array_merge($course->users,$temp) : $temp;
 			}
 		}
@@ -1389,7 +1397,7 @@ class repository_morsle extends repository {
 						$success = $DB->delete_records('morsle_event',array('eventid' => $event->eventid));
 						$this->log("$event->name deleted", $coursekey, null, s($response->response));
 					} else {
-						$this->log("$event->name NOT DELETED", $coursekey, null, s($response->response));
+						$this->log("$event->name NOT DELETED", $coursekey, null, null);
 					}
 				}
 			}
@@ -1414,7 +1422,7 @@ class repository_morsle extends repository {
 			. ' AND ma.status NOT IN(' . $this->disregard . ')
 			ORDER BY e.courseid ASC';
 		$added = $DB->get_records_sql($sql);
-		$sql = 'SELECT ma.courseid as courseid, ma.shortname as shortname, ma.password as password FROM ' . $CFG->prefix . 'event e
+		$sql = 'SELECT DISTINCT ma.courseid as courseid, ma.shortname as shortname, ma.password as password FROM ' . $CFG->prefix . 'event e
 			JOIN ' . $CFG->prefix . 'course c on e.courseid = c.id
 			JOIN ' . $CFG->prefix . 'morsle_active ma on ma.courseid = c.id
 			LEFT JOIN ' . $CFG->prefix . 'morsle_event me on me.eventid = e.id
@@ -1454,7 +1462,7 @@ class repository_morsle extends repository {
 						if ($success) {
 							$this->log('added ' . $key . " SUCCESS", $event->courseid, null, s($response->response));
 						} else {
-							$this->log('added ' . $key . " FAILURE", $event->courseid, null, s($response->response));
+							$this->log('added ' . $key . " FAILURE", $event->courseid, null, null);
 						}
 					}
 					unset($added[$key]);
@@ -1594,7 +1602,6 @@ class repository_morsle extends repository {
 						JOIN mdl_course c on c.id = ma.courseid
 						WHERE c.id = 692';
 		$courseid = $DB->get_record_sql($coursesql);
-
 		// authenticate
 		$service = 'cl';
 		$owner = $courseid->shortname . '@' . $this->domain;
@@ -1602,6 +1609,7 @@ class repository_morsle extends repository {
 		$password = morsle_decode($courseid->password);
 		$this->authstring = "Authorization: GoogleLogin auth=" . clientauth($owner, $password, $service);
 //		$password = rc4decrypt($courseid->password);
+
 
 		// set up get of feed
 		$base_feed = $this->cal_feed;
