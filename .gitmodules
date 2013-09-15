@@ -7,9 +7,6 @@
 [submodule "theme/shoelace"]
 	path = theme/shoelace
 	url = /opt/local/apache2/htdocs/shoelace
-[submodule "mod/questionnaire"]
-	path = mod/questionnaire
-	url = /opt/local/apache2/htdocs/questionnaire
 [submodule "theme/essential"]
 	path = theme/essential
 	url = /opt/local/apache2/htdocs/essential
@@ -46,3 +43,12 @@
 [submodule "question/type/regexp"]
 	path = question/type/regexp
 	url = /opt/local/apache2/htdocs/regexp
+[submodule "mod/forumng"]
+	path = mod/forumng
+	url = /opt/local/apache2/htdocs/forumng
+[submodule "mod/questionnaire"]
+	path = mod/questionnaire
+	url = /opt/local/apache2/htdocs/questionnaire
+[submodule "mod/oublog"]
+	path = mod/oublog
+	url = /opt/local/apache2/htdocs/oublog
