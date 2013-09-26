@@ -52,3 +52,6 @@
 [submodule "mod/oublog"]
 	path = mod/oublog
 	url = /opt/local/apache2/htdocs/oublog
+[submodule "course/format/flexsections"]
+	path = course/format/flexsections
+	url = /opt/local/apache2/htdocs/flexsections
