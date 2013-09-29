@@ -525,7 +525,8 @@ class grade_report_user extends grade_report {
 
 		               	}
                 	} else if ($type == 'item') { // items
-                	    if (($gradeval !== null || $USER->id == $this->user->id) && isset($parents[$itemid])) {
+                	    if ($gradeval !== null && isset($parents[$itemid])) {
+//                		if (($gradeval !== null || $USER->id == $this->user->id) && isset($parents[$itemid])) {
                             // create an array under the parents[$parentid] object containing the values for this item
                 	        $parents[$parent_id]->cat_item[$itemid] = $gradeval;
                 			$parents[$parent_id]->agg_coef[$itemid] = $parents[$itemid]->parent_agg == GRADE_AGGREGATE_WEIGHTED_MEAN ?
@@ -538,7 +539,8 @@ class grade_report_user extends grade_report {
 	              		}
 	              	}
                 }
-
+				// END OF ACCURATE TOTALS SECTION
+                
                 if ($this->showgrade) { // display only of points grade
                 	if ($grade_grade->grade_item->needsupdate) {
                         $data['grade']['class'] = $class.' gradingerror';
