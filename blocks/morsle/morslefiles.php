@@ -60,7 +60,7 @@
     $morslefilestr = get_string('morslefiles', "block_morsle");
     $PAGE->set_context($context);
 	$PAGE->set_course($course);
-    $PAGE->set_pagelayout('incourse');
+    $PAGE->set_pagelayout('report');
     $PAGE->set_url("$CFG->wwwroot/blocks/morsle/morslefiles.php", array('courseid' => $courseid, 'wdir' => $wdir, 'file' => $file, 'action' => $action, 'choose' => $choose));
     $PAGE->set_title($course->shortname.': '. $morslefilestr);
     $PAGE->set_heading($course->fullname);
