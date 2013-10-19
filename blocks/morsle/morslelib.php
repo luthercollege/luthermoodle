@@ -234,7 +234,7 @@ class morsle extends stdClass {
 			'<entry xmlns="http://www.w3.org/2005/Atom" xmlns:sites="http://schemas.google.com/sites/2008">
 			<title>' . $title . '</title>
 			<link rel="http://schemas.google.com/sites/2008#source" type="application/atom+xml"
-			href="https://sites.google.com/feeds/site/luther.edu/puffer-s-temp-hpe2"/>
+			href="https://sites.google.com/feeds/site/luther.edu/health-and-physical-education-e-portfolio"/>
 			<summary>HPE ePortfolio Site For Assessment</summary>
 			</entry>';
 
@@ -258,11 +258,12 @@ class morsle extends stdClass {
 
 		// Make the request
 		$response  = twolegged($this->site_feed, $this->params, 'GET', null, '1.4');
+		$portfolionamelen = strlen($this->portfoliobase);
 		if ($success ) {
 			$feed = simplexml_load_string($response->response);
 			foreach ($feed->entry as $entry) {
-				if(strpos($entry->title,$this->portfoliobase) === 0) {
-					$portfolio[] = trim(substr($entry->title, strlen($portfolioname),70));
+				if(strpos($entry->title,$this->portfoliobase) === 0) { // means it starts with portfoliobase not a return of false
+					$portfolio[] = trim(substr($entry->title, $portfolionamelen,70));
 				}
 			}
 			return $portfolio;
@@ -490,9 +491,9 @@ class morsle extends stdClass {
 				$delete_base_feed = $this->base_feed . 'user%3A' . $owner;
 				$response = twolegged($delete_base_feed, $this->params, 'DELETE', null, '1.4');
 				if ($response->info['http_code'] == 200) {
-					$this->log("Deleted $owner from site for $this->portfolioname", $this->courseid);
+					$this->log("Deleted $owner-$this->portfolioname", $this->courseid);
 				} else {
-					$this->log("DELETE FAILED FOR $owner from site for $this->portfolioname", $this->courseid);
+					$this->log("DELETE FAILED $owner-$this->portfolioname", $this->courseid);
 				}
 			}
 
@@ -512,9 +513,9 @@ class morsle extends stdClass {
 			$siteacldata = acl_post($student->email, 'writer', 'user');
 			$response = twolegged($this->base_feed, $this->params, 'POST', $siteacldata, '1.4');
 			if ($response->info['http_code'] == 201) {
-				$this->log("Added $student->studentname from site for $student->studentname", $this->courseid);
+				$this->log("Added $student->studentname", $this->courseid);
 			} else {
-				$this->log("ADD FAILED FOR $student->studentname from site for $student->studentname", $this->courseid);
+				$this->log("ADD FAILED FOR $student->studentname", $this->courseid);
 			}
 			return true;
 		}
@@ -602,6 +603,7 @@ class morsle extends stdClass {
 			}
 		}
 	    $roles = array_keys($allroles);
+	    $course = new stdClass();
 	    $course->users = get_role_users($roles,$coursecontext);
 	    foreach ($course->users as $cuser) {
 	    	$cuser->role = $allroles[$cuser->roleid]->shortname;

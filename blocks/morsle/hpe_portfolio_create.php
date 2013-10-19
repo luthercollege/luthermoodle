@@ -11,10 +11,11 @@
     require_once($CFG->dirroot.'/google/lib.php');
     require_once($CFG->dirroot.'/google/gauth.php');
     require_once($CFG->dirroot.'/blocks/morsle/morslelib.php');
+    global $DB;
     if ( !$CONSUMER_KEY = get_config('blocks/morsle','consumer_key')) {
         exit;
     }
-    define("COURSEID",14353);
+    define("COURSEID",1196);
 //    define("SHORTNAME",'NEW-HPE-PORTFOLIO');
 //    define("OWNER",'wrightja@luther.edu');
 //    define("OWNER",'sullivre@luther.edu');
@@ -25,14 +26,15 @@
 //	$morsle->get_aliases();
 
 	// setup other variables used by libraries
-	$morsle->shortname = 'NEW-HPE-PORTFOLIO';
+	$morsle->shortname = 'HPE-PORTFOLIO';
 	$morsle->courseid = COURSEID;
     $morsle->portfoliobase = 'HPE Portfolio Site for ';
     $morsle->user= 'wrightja@luther.edu';
-    $morsle->params = array('xoauth_requestor_id' => $morsle->user);
+    $morsle->params = array('xoauth_requestor_id' => $morsle->user, 'max-results' => 500);
     $morsle->groupname = $morsle->shortname . '-group';
     $morsle->groupfullname= $morsle->groupname . '@' . $morsle->domain;
     $morsle->visible = 1;
+    $record = $DB->get_record('morsle_active', array('courseid'=>COURSEID));
     $morsle->sitename = substr($record->siteid,strpos($record->siteid,$morsle->domain),100);
 
 	// get all information for all members of the course
