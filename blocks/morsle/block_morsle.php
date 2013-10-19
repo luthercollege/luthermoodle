@@ -56,6 +56,7 @@
 	$conditions = array('courseid' => $COURSE->id);
 	if (!$morslerec = $DB->get_record('morsle_active',$conditions)) {
 		if(has_capability('moodle/course:update', $context) && !is_siteadmin($USER)) {
+			$newrec = new stdClass();
 			$newrec->created = time();
 			$newrec->status = 'Full';
 			$newrec->courseid = $COURSE->id;
