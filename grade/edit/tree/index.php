@@ -347,6 +347,8 @@ echo '<input type="hidden" name="sesskey" value="'.sesskey().'" />';
 
 //did we update something in the db and thus invalidate $grade_edit_tree?
 if ($recreatetree) {
+	unset($gtree);
+	$gtree = grade_tree_local_helper($courseid, false, false, null, false, 0);
     $grade_edit_tree = new grade_edit_tree($gtree, $movingeid, $gpr);
 }
 
