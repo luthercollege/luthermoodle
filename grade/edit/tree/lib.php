@@ -265,8 +265,10 @@ class grade_edit_tree {
                         $html_children = array_merge($html_children, $category_total_item);
                     }
                 } else {
-                    $html_children = array_merge($html_children, $this->build_html_tree($child_el, $totals, $newparents, $level, $child_row_count, $accuratetotals));
-                    if (!empty($moveto)) {
+                    // hack to allow for accuratetotals
+                	$html_children = array_merge($html_children, $this->build_html_tree($child_el, $totals, $newparents, $level, $child_row_count, $accuratetotals));
+                    // end of hack
+                	if (!empty($moveto)) {
                         $html_children[] = $moveto;
                     }
 
