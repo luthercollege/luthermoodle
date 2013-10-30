@@ -343,7 +343,15 @@ class grade_report_user extends grade_report {
         
         // substituting shorthand for long object variables
         $items = $this->gtree->items;
-		$parents = $this->gtree->parents;
+        $item =& $items[$itemid];
+        
+        // need to reset extra credit for the item
+        if (!isset($this->gtree->parents[$itemid]->excredit)) {
+			if (!isset($this->gtree->parents[$itemid])) {
+				$this->gtree->parents[$itemid] = new stdClass;
+			}
+			$this->gtree->parents[$itemid]->excredit = 0;
+		} 
         
         // If this is a hidden grade category, hide it completely from the user
         if ($type == 'category' && $grade_object->is_hidden() && !$this->canviewhidden && (
@@ -362,16 +370,16 @@ class grade_report_user extends grade_report {
             $header_row = "row_{$eid}_{$this->user->id}";
             $header_cat = "cat_{$grade_object->categoryid}_{$this->user->id}";
 
-            if (! $grade_grade = grade_grade::fetch(array('itemid'=>$grade_object->id,'userid'=>$this->user->id))) {
-                $grade_grade = new grade_grade();
-                $grade_grade->userid = $this->user->id;
-                $grade_grade->itemid = $grade_object->id;
+            if (! $grade = grade_grade::fetch(array('itemid'=>$grade_object->id,'userid'=>$this->user->id))) {
+                $grade = new grade_grade();
+                $grade->userid = $this->user->id;
+                $grade->itemid = $grade_object->id;
             }
 
-            $grade_grade->load_grade_item();
+            $grade->load_grade_item();
 
             /// Hidden Items
-            if ($grade_grade->grade_item->is_hidden()) {
+            if ($grade->grade_item->is_hidden()) {
                 $hidden = ' hidden';
             }
 
@@ -381,9 +389,9 @@ class grade_report_user extends grade_report {
             
 	        $hide = false;
             // If this is a hidden grade item, hide it completely from the user.
-            if ($grade_grade->is_hidden() && !$this->canviewhidden && (
+            if ($grade->is_hidden() && !$this->canviewhidden && (
                     $this->showhiddenitems == GRADE_REPORT_USER_HIDE_HIDDEN ||
-                    ($this->showhiddenitems == GRADE_REPORT_USER_HIDE_UNTIL && !$grade_grade->is_hiddenuntil()))) {
+                    ($this->showhiddenitems == GRADE_REPORT_USER_HIDE_UNTIL && !$grade->is_hiddenuntil()))) {
                 $hide = true;
             } else if (!empty($grade_object->itemmodule) && !empty($grade_object->iteminstance)) {
                 // The grade object can be marked visible but still be hidden if...
@@ -404,7 +412,7 @@ class grade_report_user extends grade_report {
 
             if (!$hide) {
                 /// Excluded Item
-                if ($grade_grade->is_excluded()) {
+                if ($grade->is_excluded()) {
                     $fullname .= ' ['.get_string('excluded', 'grades').']';
                     $excluded = ' excluded';
                 }
@@ -428,7 +436,7 @@ class grade_report_user extends grade_report {
                 $data['itemname']['id'] = $header_row;
 
                 /// Actual Grade
-                $gradeval = $grade_grade->finalgrade;
+                $gradeval = $grade->finalgrade;
 
                 if ($this->showfeedback) {
                     // Copy $class before appending itemcenter as feedback should not be centered
@@ -450,166 +458,95 @@ class grade_report_user extends grade_report {
                 // we don't attempt to determine at this time what different grade display types are actually being shown
                 /**** ACCURATE TOTALS CALCULATIONS *****/
                 // determine if we should calculate up for accuratetotals
-                if ($grade_grade->is_hidden() && $showtotalsifcontainhidden !== GRADE_REPORT_SHOW_REAL_TOTAL_IF_CONTAINS_HIDDEN) {
+                if ($grade->is_hidden() && $showtotalsifcontainhidden !== GRADE_REPORT_SHOW_REAL_TOTAL_IF_CONTAINS_HIDDEN) {
                     // do nothing
-                } else if (!isset($parent_id) && $type !== 'courseitem') {
+                } else if ($gradeval == null) {
+                    // do nothing
+            	} else if (!isset($this->gtree->parents[$itemid])) {
+                    // do nothing
+            	} else if (!isset($parent_id) && $type !== 'courseitem') {
                     // do nothing
                 } else if ($accuratetotals) {
 	    			// the parent record contains an id field pointing to its parent, the key on the parent record is the item itself to allow lookup
-                	if ($type == 'categoryitem' || $type == 'courseitem') { // categoryitems or courseitems
-                		if (isset($parents[$itemid]->cat_item)) { // if category or course has marked grades in it
-	                		// set up variables that are used in this inserted limit_rules scrap
-	                		$this_cat = $this->gtree->items[$itemid]->get_item_category(); // need category settings like drop-low or keep-high
-	                		// need to run through this sequence three times to limit all of the extra items added to the parents array
-	    	               	// copy cat_max to a variable we can send along with this bogus limit_item call to limit pctg
-	    	               	$grade_maxes = $parents[$itemid]->cat_max;
-						    $this->gtree->limit_item($this_cat,$items,$parents[$itemid]->pctg,$grade_maxes); // TODO: test this with some drop-low conditions to see if we can still ascertain the weighted grade
-	    	               	// copy cat_max to a variable we can send along with this bogus limit_item call to limit cat_item
-	    	               	$grade_maxes = $parents[$itemid]->cat_max;
-						    $this->gtree->limit_item($this_cat,$items,$parents[$itemid]->cat_item,$parents[$itemid]->cat_max); // TODO: test this with some drop-low conditions to see if we can still ascertain the weighted grade
-	                		// assign after we've limited the source array
-	    	               	
-	                		// agg_coef cannot reliably be limited by the limit_item function because all it is is weights
-    	               		foreach ($parents[$itemid]->agg_coef as $key=>$value) {
-    	               			if (! isset($parents[$itemid]->cat_item[$key])) {
-    	               				unset($parents[$itemid]->agg_coef[$key]);
-    	               			}
-    	               		}
-						    
-						    $grade_maxes = $parents[$itemid]->cat_max;
-						    $grade_values = $parents[$itemid]->cat_item; // earned points
-						}
-
-						if (! isset($grade_values)) {
-							// do nothing
-						} else if ($type == 'categoryitem') { // instead of a course item
-                            // create an array under the parents[$parentid] object containing the values for this category
-    		               	if ($parents[$itemid]->parent_agg == GRADE_AGGREGATE_WEIGHTED_MEAN2) {
-    							$parents[$parent_id]->agg_coef[$itemid] = array_sum($grade_maxes); // range of earnable points
-    		               	} else {
-    							$parents[$parent_id]->agg_coef[$itemid] = $grade_object->aggregationcoef; // store this regardless of parent aggtype
-    		               	}
-
-    		               	if (isset($grade_values)) {
-                           	    // continue adding to the array under the parent object
-        		               	$parents[$parent_id]->cat_item[$itemid] = array_sum($grade_values); // earned points
-	    						// if we have a point value or if viewing an empty report
-//    		       			if (isset($gradeval) || $this->user->id == $USER->id) {
-    							$parents[$parent_id]->cat_max[$itemid] = array_sum($grade_maxes); // range of earnable points
-    			       			// determine the weighted grade if necessary
-    			       			// we're checking the aggtype stored by the children
-        		       			$keys = array_keys($grade_values);
-        						$weight_normalizer = 1 / max(1,array_sum($parents[$itemid]->agg_coef)); // adjust all weights in a container so their sum equals 100
-        						$weighted_percentage = 0;
-        						foreach ($parents[$itemid]->pctg as $key=>$pctg) {
-        							// the previously calculated percentage (which might already be weighted) times the normalizer * the weight
-        							$weighted_percentage += $pctg*$weight_normalizer*$parents[$itemid]->agg_coef[$key];
-        						}
-        						$parents[$parent_id]->pctg[$itemid]= $weighted_percentage;
-    		       			}
-		               	} else if (!isset($parents[$itemid]->agg_coef)) {
-		               	    $parents[$itemid]->coursepctg = 1;
-                	    } else { // calculate up the weighted percentage for the course item
-	               	        $weight_normalizer = 0;
-	               	        $weighted_percentage = 0;
-	               	        foreach ($parents[$itemid]->agg_coef as $key=>$value) {
-	               	            // the previously calculated percentage (which might already be weighted) times the normalizer * the weight
-	               	            $weight_normalizer += $value;
-                                if (isset($parents[$itemid]->pctg)) {
-    	               	            $weighted_percentage += $parents[$itemid]->pctg[$key]*$value;
-                                }
-	               	        }
-	               	        $weight_normalizer = 1 / $weight_normalizer;
-	               	        $weighted_percentage *= $weight_normalizer;
-		               	    $parents[$itemid]->coursepctg = $weighted_percentage;
-
-		               	}
-                	} else if ($type == 'item') { // items
-                	    if ($gradeval !== null && isset($parents[$itemid])) {
-//                		if (($gradeval !== null || $USER->id == $this->user->id) && isset($parents[$itemid])) {
-                            // create an array under the parents[$parentid] object containing the values for this item
-                	        $parents[$parent_id]->cat_item[$itemid] = $gradeval;
-                			$parents[$parent_id]->agg_coef[$itemid] = $parents[$itemid]->parent_agg == GRADE_AGGREGATE_WEIGHTED_MEAN ?
-                    			    $grade_object->aggregationcoef :
-                    			    $grade_grade->grade_item->grademax; // if we're using WM store aggcoef, otherwise store grade_max (natural weight)
-							$parents[$parent_id]->cat_max[$itemid] = $grade_grade->grade_item->grademax;
-							$parents[$parent_id]->pctg[$itemid] = $gradeval / $grade_grade->grade_item->grademax;
-	              		} else {
-	              		    $parents[$parent_id]->pctg[$itemid] = null;
-	              		}
-	              	}
+					$this->gtree->accuratepointsprelimcalculation($itemid, $type, $grade);
                 }
-				// END OF ACCURATE TOTALS SECTION
                 
                 if ($this->showgrade) { // display only of points grade
-                	if ($grade_grade->grade_item->needsupdate) {
+                	if ($grade->grade_item->needsupdate) {
                         $data['grade']['class'] = $class.' gradingerror';
                         $data['grade']['content'] = get_string('error');
-                	} else if (!empty($CFG->grade_hiddenasdate) and $grade_grade->get_datesubmitted() and !$this->canviewhidden and $grade_grade->is_hidden()
-                           and !$grade_grade->grade_item->is_category_item() and !$grade_grade->grade_item->is_course_item()) {
+                	} else if (!empty($CFG->grade_hiddenasdate) and $grade->get_datesubmitted() and !$this->canviewhidden and $grade->is_hidden()
+                           and !$grade->grade_item->is_category_item() and !$grade->grade_item->is_course_item()) {
                         // the problem here is that we do not have the time when grade value was modified, 'timemodified' is general modification date for grade_grades records
                         $class .= ' datesubmitted';
                         $data['grade']['class'] = $class;
-                        $data['grade']['content'] = get_string('submittedon', 'grades', userdate($grade_grade->get_datesubmitted(), get_string('strftimedatetimeshort')));
-                    } elseif ($grade_grade->is_hidden()) {
+                        $data['grade']['content'] = get_string('submittedon', 'grades', userdate($grade->get_datesubmitted(), get_string('strftimedatetimeshort')));
+                    } elseif ($grade->is_hidden()) {
                             $data['grade']['class'] = $class.' hidden';
                             $data['grade']['content'] = '-';
                     } else {
                         $data['grade']['class'] = $class;
+				        // this covers the instance where a course item is sent which doesn't have a parent_id
+						$parent_id = !isset($parent_id) ? $itemid: $parent_id;
+                        $grade_values = $this->gtree->parents[$itemid]->cat_item; // earned points
                         // $grade_values never gets created if $this->accuratetotals isn't on
-                        if (isset($grade_values)) { // CATEGORY or COURSE item with values accumulated from its children
-                            $tempmax = $grade_grade->grade_item->grademax;
-                            $grade_grade->grade_item->grademax = array_sum($grade_maxes); // real EARNABLE points total
+                        if (sizeof($grade_values) !== 0) { // CATEGORY or COURSE item with values accumulated from its children
+							$gradeval = $this->gtree->accuratepointsfinalvalues($itemid, $item, $type, $parent_id, $gradeval, GRADE_DISPLAY_TYPE_REAL);
+/*
+							$tempmax = $grade->grade_item->grademax;
+                            $grade->grade_item->grademax = array_sum($grade_maxes); // real EARNABLE points total
 
                             // array($grade_values) is real EARNED total
-                            $data['grade']['content'] = grade_format_gradevalue(array_sum($grade_values), $grade_grade->grade_item, true,GRADE_DISPLAY_TYPE_REAL);
-                            $grade_grade->grade_item->grademax = $tempmax;
-                        } else { // grade ITEM
+                            $data['grade']['content'] = grade_format_gradevalue(array_sum($grade_values), $grade->grade_item, true,GRADE_DISPLAY_TYPE_REAL);
+                            $grade->grade_item->grademax = $tempmax;
+*/
+//                        } else { // grade ITEM
                             // store grade to containing category or course
-                            $data['grade']['content'] = grade_format_gradevalue($gradeval, $grade_grade->grade_item, true,GRADE_DISPLAY_TYPE_REAL);
                         }
+                    	$data['grade']['content'] = grade_format_gradevalue($gradeval, $grade->grade_item, true,GRADE_DISPLAY_TYPE_REAL);
                     }
                     $data['grade']['headers'] = "$header_cat $header_row grade";
                 }
+                /***** ACCURATE TOTALS END *****/
 
                 // Range
                 if ($this->showrange) {
                 	// include for limit rules, if needed
                 	$data['range']['class'] = $class;
                     // if a category or course item
-                   	$tempmax = $grade_grade->grade_item->grademax;
+                   	$tempmax = $grade->grade_item->grademax;
 
                    	// if we're using accuratetotals and this is a category or course then $grade_maxes will have values
                    	if ($this->accuratetotals && ($type == 'categoryitem' or $type == 'courseitem')) {
-                   		$grade_grade->grade_item->grademax = isset($grade_maxes) ? array_sum($grade_maxes) : $grade_object->max_earnable;
+                   		$grade->grade_item->grademax = isset($grade_maxes) ? array_sum($grade_maxes) : $grade_object->max_earnable;
                    	}
                     $data['range']['class'] = $class;
-                    $data['range']['content'] = $grade_grade->grade_item->get_formatted_range(GRADE_DISPLAY_TYPE_REAL, $this->rangedecimals);
-                    $grade_grade->grade_item->grademax = $tempmax;
+                    $data['range']['content'] = $grade->grade_item->get_formatted_range(GRADE_DISPLAY_TYPE_REAL, $this->rangedecimals);
+                    $grade->grade_item->grademax = $tempmax;
                     $data['range']['headers'] = "$header_cat $header_row range";
                 }
 
                 // adjust gradeval in case of percentage or letter display
-                if ($this->accuratetotals && ($type == 'categoryitem' || $type == 'courseitem') && ! $grade_grade->is_hidden()) {
+                if ($this->accuratetotals && ($type == 'categoryitem' || $type == 'courseitem') && ! $grade->is_hidden()) {
                     if ($type == 'categoryitem') {
-	                    $gradeval = $parents[$parent_id]->pctg[$itemid];
+	                    $gradeval = $this->gtree->parents[$parent_id]->pctg[$itemid];
 					} else {
-						$gradeval = $parents[$itemid]->coursepctg;
+						$gradeval = $this->gtree->parents[$itemid]->coursepctg;
 					}
-					$grade_grade->grade_item->grademax = 1;
+					$grade->grade_item->grademax = 1;
 				}
                                 
                 // Percentage
                 if ($this->showpercentage) {
-                    if ($grade_grade->grade_item->needsupdate) {
+                    if ($grade->grade_item->needsupdate) {
                         $data['percentage']['class'] = $class.' gradingerror';
                         $data['percentage']['content'] = get_string('error');
-                    } else if ($grade_grade->is_hidden()) {
+                    } else if ($grade->is_hidden()) {
                         $data['percentage']['class'] = $class.' hidden';
                         $data['percentage']['content'] = '-';
                     } elseif (isset($gradeval)) {
                         $data['percentage']['class'] = $class;
-                    	$data['percentage']['content'] = grade_format_gradevalue($gradeval, $grade_grade->grade_item, true, GRADE_DISPLAY_TYPE_PERCENTAGE);
+                    	$data['percentage']['content'] = grade_format_gradevalue($gradeval, $grade->grade_item, true, GRADE_DISPLAY_TYPE_PERCENTAGE);
                     } else {
                         $data['percentage']['class'] = $class;
                         $data['percentage']['content'] = '-';
@@ -619,32 +556,32 @@ class grade_report_user extends grade_report {
 
                 // Lettergrade
                 if ($this->showlettergrade) {
-                    if ($grade_grade->grade_item->needsupdate) {
+                    if ($grade->grade_item->needsupdate) {
                         $data['lettergrade']['class'] = $class.' gradingerror';
                         $data['lettergrade']['content'] = get_string('error');
-                    } else if ($grade_grade->is_hidden()) {
+                    } else if ($grade->is_hidden()) {
                         $data['lettergrade']['class'] = $class.' hidden';
                         if (!$this->canviewhidden) {
                             $data['lettergrade']['content'] = '-';
                         } else {
-                            $data['lettergrade']['content'] = grade_format_gradevalue($gradeval, $grade_grade->grade_item, true, GRADE_DISPLAY_TYPE_LETTER);
+                            $data['lettergrade']['content'] = grade_format_gradevalue($gradeval, $grade->grade_item, true, GRADE_DISPLAY_TYPE_LETTER);
                         }
                     } else if (isset($gradeval)) {
                         $data['lettergrade']['class'] = $class;
-                    	$data['lettergrade']['content'] = grade_format_gradevalue($gradeval, $grade_grade->grade_item, true, GRADE_DISPLAY_TYPE_LETTER);
+                    	$data['lettergrade']['content'] = grade_format_gradevalue($gradeval, $grade->grade_item, true, GRADE_DISPLAY_TYPE_LETTER);
                     } else {
                         $data['lettergrade']['content'] = '-';
-                        $data['lettergrade']['content'] = grade_format_gradevalue($gradeval, $grade_grade->grade_item, true, GRADE_DISPLAY_TYPE_LETTER);
+                        $data['lettergrade']['content'] = grade_format_gradevalue($gradeval, $grade->grade_item, true, GRADE_DISPLAY_TYPE_LETTER);
                     }
                     $data['lettergrade']['headers'] = "$header_cat $header_row lettergrade";
                 }
 
                 // Rank
                 if ($this->showrank) {
-                    if ($grade_grade->grade_item->needsupdate) {
+                    if ($grade->grade_item->needsupdate) {
                         $data['rank']['class'] = $class.' gradingerror';
                         $data['rank']['content'] = get_string('error');
-                        } elseif ($grade_grade->is_hidden()) {
+                        } elseif ($grade->is_hidden()) {
                             $data['rank']['class'] = $class.' hidden';
                             $data['rank']['content'] = '-';
                     } else if (is_null($gradeval)) {
@@ -659,7 +596,7 @@ class grade_report_user extends grade_report {
                                  WHERE finalgrade > ?
                                        AND itemid = ?
                                        AND hidden = 0";
-                        $rank = $DB->count_records_sql($sql, array($grade_grade->finalgrade, $grade_grade->grade_item->id)) + 1;
+                        $rank = $DB->count_records_sql($sql, array($grade->finalgrade, $grade->grade_item->id)) + 1;
 
                         $data['rank']['class'] = $class;
                         $data['rank']['content'] = "$rank/".$this->get_numusers(false); // total course users
@@ -680,15 +617,15 @@ class grade_report_user extends grade_report {
 
                 // Feedback
                 if ($this->showfeedback) {
-                    if ($grade_grade->overridden > 0 AND ($type == 'categoryitem' OR $type == 'courseitem')) {
+                    if ($grade->overridden > 0 AND ($type == 'categoryitem' OR $type == 'courseitem')) {
                     	$data['feedback']['class'] = $classfeedback.' feedbacktext';
-                        $data['feedback']['content'] = get_string('overridden', 'grades').': ' . format_text($grade_grade->feedback, $grade_grade->feedbackformat);
-                    } else if (empty($grade_grade->feedback) or (!$this->canviewhidden and $grade_grade->is_hidden())) {
+                        $data['feedback']['content'] = get_string('overridden', 'grades').': ' . format_text($grade->feedback, $grade->feedbackformat);
+                    } else if (empty($grade->feedback) or (!$this->canviewhidden and $grade->is_hidden())) {
                         $data['feedback']['class'] = $classfeedback.' feedbacktext';
                         $data['feedback']['content'] = '&nbsp;';
                     } else {
                         $data['feedback']['class'] = $classfeedback.' feedbacktext';
-                        $data['feedback']['content'] = format_text($grade_grade->feedback, $grade_grade->feedbackformat);
+                        $data['feedback']['content'] = format_text($grade->feedback, $grade->feedbackformat);
                     }
                     $data['feedback']['headers'] = "$header_cat $header_row feedback";
                 }
