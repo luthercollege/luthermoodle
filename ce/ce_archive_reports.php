@@ -2,7 +2,7 @@
 	require_once('../config.php');
     require_once($CFG->dirroot.'/google/lib.php');
     require_once($CFG->dirroot.'/google/gauth.php');
-    require_once("ce-lib.php");
+    require_once("ce_lib.php");
     
     // set up variables
 	define('TEMPLATENAME', 'CE-Report for 53395-Template');

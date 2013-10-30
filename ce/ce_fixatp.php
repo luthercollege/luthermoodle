@@ -1,6 +1,6 @@
 <?php
 require_once('../config.php');  // if run from outside as by cron
-    require_once("ce-lib.php");
+    require_once("ce_lib.php");
 $currentterm = '2012FA';
 
 // get all the candidates

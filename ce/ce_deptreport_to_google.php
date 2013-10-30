@@ -2,7 +2,7 @@
 	require_once('../config.php');  // if run from outside as by cron
     require_once($CFG->dirroot.'/google/lib.php');
     require_once($CFG->dirroot.'/google/gauth.php');
-    require_once("$CFG->dirroot/ce/ce-lib.php");
+    require_once("$CFG->dirroot/ce/ce_lib.php");
 
     // set up variables
 	$templatename = 'Departmental Course Evaluation Report for Sample';
