@@ -55,3 +55,6 @@
 [submodule "course/format/flexsections"]
 	path = course/format/flexsections
 	url = /opt/local/apache2/htdocs/flexsections
+[submodule "grade/report/laeuser"]
+	path = grade/report/laeuser
+	url = /opt/local/apache2/htdocs/laeuser

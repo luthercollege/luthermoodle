@@ -2946,13 +2946,15 @@ class assign {
      * @return string
      */
     protected function view_grading_page() {
-        global $CFG;
+        global $CFG, $PAGE;
 
         $o = '';
         // Need submit permission to submit an assignment.
         require_capability('mod/assign:grade', $this->context);
         require_once($CFG->dirroot . '/mod/assign/gradeform.php');
-
+		$PAGE->set_pagelayout('report');
+        
+        
         // Only load this if it is.
 
         $o .= $this->view_grading_table();

@@ -38,7 +38,7 @@ $course = $DB->get_record('course', array('id' => $cm->course), '*', MUST_EXIST)
 
 require_login($course, true, $cm);
 $PAGE->set_url($url);
-$PAGE->set_pagelayout('report');
+$PAGE->set_pagelayout('admin');
 
 
 $context = context_module::instance($cm->id);
